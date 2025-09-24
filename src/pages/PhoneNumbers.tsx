@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Phone, PhoneCall, Plus, Settings, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 export default function PhoneNumbers() {
   const [outboundNumber, setOutboundNumber] = useState("");
   const [selectedAgent, setSelectedAgent] = useState("");
@@ -14,6 +15,9 @@ export default function PhoneNumbers() {
   const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { toast } = useToast();
   useEffect(() => {
     loadPhoneNumbers();
     loadAgents();
@@ -93,12 +97,30 @@ export default function PhoneNumbers() {
     }
   };
   const handleOutboundCall = async () => {
-    try {
-      if (!selectedPhoneNumber || !selectedAgent || !outboundNumber) {
-        console.error('Missing required fields for outbound call');
-        return;
-      }
+    if (!selectedPhoneNumber || !selectedAgent || !outboundNumber) {
+      toast({
+        title: "Fehler",
+        description: "Bitte füllen Sie alle Felder aus",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    // Format phone number (remove spaces)
+    const formattedNumber = outboundNumber.replace(/\s+/g, '');
+
+    // Validate phone number format
+    if (!formattedNumber.match(/^\+4[39]\d{8,15}$/)) {
+      toast({
+        title: "Ungültiges Telefonnummer-Format",
+        description: "Die Telefonnummer muss im Format +49 oder +43 beginnen",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
       const phone = phoneNumbers.find(p => p.id === selectedPhoneNumber);
       if (!phone) return;
 
@@ -106,22 +128,33 @@ export default function PhoneNumbers() {
         body: {
           agent_id: selectedAgent,
           phone_number_id: phone.phonenumber_id,
-          to_number: outboundNumber
+          to_number: formattedNumber,
         }
       });
 
-      if (error) {
-        console.error('Error starting outbound call:', error);
-        return;
-      }
+      if (error) throw error;
 
-      console.log('Outbound call started successfully:', data);
-      // Reset form
-      setOutboundNumber("");
-      setSelectedAgent("");
-      setSelectedPhoneNumber("");
+      if (data?.success) {
+        toast({
+          title: "Anruf erfolgreich gestartet!",
+          description: `Der Outbound Call wurde erfolgreich gestartet`,
+        });
+        // Clear form
+        setOutboundNumber('');
+        setSelectedAgent('');
+        setSelectedPhoneNumber('');
+      } else {
+        throw new Error(data?.error || 'Unbekannter Fehler');
+      }
     } catch (error) {
       console.error('Error starting outbound call:', error);
+      toast({
+        title: "Fehler beim Starten des Calls",
+        description: error instanceof Error ? error.message : "Unbekannter Fehler",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
   return <div className="space-y-8">
@@ -238,11 +271,11 @@ export default function PhoneNumbers() {
             
             <Button 
               onClick={handleOutboundCall} 
-              disabled={!outboundNumber || !selectedAgent || !selectedPhoneNumber} 
+              disabled={!outboundNumber || !selectedAgent || !selectedPhoneNumber || isLoading} 
               className="w-full"
             >
               <PhoneCall className="h-4 w-4 mr-2" />
-              Anruf starten
+              {isLoading ? "Startet..." : "Anruf starten"}
             </Button>
             
             {(agents.length === 0 || phoneNumbers.length === 0) && (

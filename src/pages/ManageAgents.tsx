@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Bot, Plus, Edit, Trash2, Play } from "lucide-react";
+import { Bot, Plus, Edit, Trash2, Play, TestTube } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 export default function ManageAgents() {
   const [agents, setAgents] = useState<any[]>([]);
   const [voices, setVoices] = useState<any[]>([]);
+  const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingAgent, setEditingAgent] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({
@@ -24,6 +25,13 @@ export default function ManageAgents() {
     prompt: ''
   });
   const [updating, setUpdating] = useState(false);
+  
+  // Test dialog states
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [testingAgent, setTestingAgent] = useState<any>(null);
+  const [testPhoneNumber, setTestPhoneNumber] = useState("");
+  const [selectedTestPhoneNumber, setSelectedTestPhoneNumber] = useState<any>(null);
+  const [isTestLoading, setIsTestLoading] = useState(false);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -31,6 +39,7 @@ export default function ManageAgents() {
   useEffect(() => {
     loadAgents();
     loadVoices();
+    loadPhoneNumbers();
   }, []);
 
   const loadAgents = async () => {
@@ -75,6 +84,24 @@ export default function ManageAgents() {
     }
   };
 
+  const loadPhoneNumbers = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('phone_numbers')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPhoneNumbers(data || []);
+    } catch (error) {
+      console.error('Error loading phone numbers:', error);
+    }
+  };
+
   const handleEditAgent = (agent: any) => {
     setEditingAgent(agent);
     setEditFormData({
@@ -83,6 +110,13 @@ export default function ManageAgents() {
       first_message: agent.first_message || '',
       prompt: agent.prompt || ''
     });
+  };
+
+  const handleTestAgent = (agent: any) => {
+    setTestingAgent(agent);
+    setTestPhoneNumber("");
+    setSelectedTestPhoneNumber(null);
+    setTestDialogOpen(true);
   };
 
   const handleUpdateAgent = async () => {
@@ -138,6 +172,64 @@ export default function ManageAgents() {
       });
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleTestCall = async () => {
+    if (!selectedTestPhoneNumber || !testPhoneNumber) {
+      toast({
+        title: "Fehler",
+        description: "Bitte wählen Sie eine Telefonnummer und geben Sie Ihre Nummer ein",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Format phone number (remove spaces)
+    const formattedNumber = testPhoneNumber.replace(/\s+/g, '');
+
+    // Validate phone number format
+    if (!formattedNumber.match(/^\+4[39]\d{8,15}$/)) {
+      toast({
+        title: "Ungültiges Telefonnummer-Format",
+        description: "Die Telefonnummer muss im Format +49 oder +43 beginnen",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTestLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('outbound-call', {
+        body: {
+          agent_id: testingAgent.id,
+          phone_number_id: selectedTestPhoneNumber.phonenumber_id,
+          to_number: formattedNumber,
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Test-Anruf erfolgreich gestartet!",
+          description: `Sie werden gleich vom Agent "${testingAgent.name}" angerufen`,
+        });
+        setTestDialogOpen(false);
+        setTestPhoneNumber("");
+        setSelectedTestPhoneNumber(null);
+      } else {
+        throw new Error(data?.error || 'Unbekannter Fehler');
+      }
+    } catch (error) {
+      console.error('Error starting test call:', error);
+      toast({
+        title: "Fehler beim Test-Anruf",
+        description: error instanceof Error ? error.message : "Unbekannter Fehler",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestLoading(false);
     }
   };
 
@@ -296,10 +388,72 @@ export default function ManageAgents() {
                         )}
                       </DialogContent>
                     </Dialog>
-                    <Button size="sm" variant="outline" className="flex-1">
-                      <Play className="h-4 w-4 mr-1" />
-                      Testen
-                    </Button>
+                    
+                    <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => handleTestAgent(agent)}
+                        >
+                          <TestTube className="h-4 w-4 mr-1" />
+                          Testen
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Agent "{testingAgent?.name}" testen</DialogTitle>
+                          <DialogDescription>
+                            Starten Sie einen Test-Anruf mit diesem Agenten. Sie werden angerufen.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="testPhoneSelect">Von welcher Nummer anrufen?</Label>
+                            <Select 
+                              value={selectedTestPhoneNumber?.id || ''} 
+                              onValueChange={(value) => {
+                                const phone = phoneNumbers.find(p => p.id === value);
+                                setSelectedTestPhoneNumber(phone);
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Telefonnummer wählen" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {phoneNumbers.map((phone) => (
+                                  <SelectItem key={phone.id} value={phone.id}>
+                                    {phone.phone_number}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="testPhoneNumber">Ihre Telefonnummer</Label>
+                            <Input
+                              id="testPhoneNumber"
+                              placeholder="+4912345678"
+                              value={testPhoneNumber}
+                              onChange={(e) => setTestPhoneNumber(e.target.value)}
+                            />
+                            <p className="text-sm text-muted-foreground">
+                              Format: +49 oder +43 gefolgt von der Nummer
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" onClick={() => setTestDialogOpen(false)}>
+                            Abbrechen
+                          </Button>
+                          <Button onClick={handleTestCall} disabled={isTestLoading}>
+                            {isTestLoading ? "Startet..." : "Test-Anruf starten"}
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
               </CardContent>

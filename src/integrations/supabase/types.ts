@@ -53,6 +53,45 @@ export type Database = {
         }
         Relationships: []
       }
+      call_logs: {
+        Row: {
+          agent_name: string
+          call_timestamp: string
+          caller_number: string
+          created_at: string
+          duration: number
+          elevenlabs_agent_id: string
+          id: string
+          transcript: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_name: string
+          call_timestamp?: string
+          caller_number: string
+          created_at?: string
+          duration?: number
+          elevenlabs_agent_id: string
+          id?: string
+          transcript?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_name?: string
+          call_timestamp?: string
+          caller_number?: string
+          created_at?: string
+          duration?: number
+          elevenlabs_agent_id?: string
+          id?: string
+          transcript?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       phone_numbers: {
         Row: {
           assigned_agent: string | null
