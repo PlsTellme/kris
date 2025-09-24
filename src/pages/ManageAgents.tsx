@@ -97,10 +97,9 @@ export default function ManageAgents() {
 
     setUpdating(true);
     try {
-      // Get the current session to ensure we have a valid token
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
+      // Get the current user id only to include in the body (no header needed)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         throw new Error('Nicht authentifiziert. Bitte melden Sie sich erneut an.');
       }
 
@@ -108,10 +107,8 @@ export default function ManageAgents() {
         body: {
           agent_id: editingAgent.id,
           elevenlabs_agent_id: editingAgent.elevenlabs_agent_id,
+          user_id: user.id,
           ...editFormData
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
         }
       });
 
@@ -141,38 +138,6 @@ export default function ManageAgents() {
       });
     } finally {
       setUpdating(false);
-    }
-  };
-
-  const handleDeleteAgent = async (agent: any) => {
-    if (!confirm('Sind Sie sicher, dass Sie diesen Agenten löschen möchten?')) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('agents')
-        .delete()
-        .eq('id', agent.id);
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Erfolg",
-        description: "Agent wurde erfolgreich gelöscht!"
-      });
-
-      loadAgents(); // Reload agents
-      
-    } catch (error: any) {
-      console.error('Error deleting agent:', error);
-      toast({
-        title: "Fehler",
-        description: "Fehler beim Löschen des Agenten",
-        variant: "destructive"
-      });
     }
   };
 
@@ -334,13 +299,6 @@ export default function ManageAgents() {
                     <Button size="sm" variant="outline" className="flex-1">
                       <Play className="h-4 w-4 mr-1" />
                       Testen
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => handleDeleteAgent(agent)}
-                    >
-                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

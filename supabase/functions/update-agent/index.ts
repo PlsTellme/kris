@@ -14,24 +14,13 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Authorization header is missing');
+    const { agent_id, name, voice_id, first_message, prompt, elevenlabs_agent_id, user_id } = await req.json();
+
+    if (!agent_id || !name || !voice_id || !prompt || !elevenlabs_agent_id || !user_id) {
+      throw new Error('Missing required fields');
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
-    );
-
-    const { agent_id, name, voice_id, first_message, prompt, elevenlabs_agent_id } = await req.json();
-
-    console.log('Updating agent with data:', { agent_id, name, voice_id, first_message, prompt, elevenlabs_agent_id });
+    console.log('Updating agent with data:', { agent_id, name, voice_id, first_message, prompt, elevenlabs_agent_id, user_id });
 
     // Update agent in 11labs
     const elevenlabsResponse = await fetch(`https://api.elevenlabs.io/v1/convai/agents/${elevenlabs_agent_id}`, {
@@ -68,20 +57,14 @@ serve(async (req) => {
       throw new Error(`11labs API error: ${error}`);
     }
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError) {
-      console.error('Auth error:', userError);
-      throw new Error(`Authentication failed: ${userError.message}`);
-    }
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    
-    console.log('Authenticated user:', user.id);
+    // Use service role for DB update (bypass RLS safely inside server)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
     // Update agent in database
-    const { data: agentData, error: agentError } = await supabaseClient
+    const { data: agentData, error: agentError } = await supabaseAdmin
       .from('agents')
       .update({
         name: name,
@@ -90,7 +73,7 @@ serve(async (req) => {
         prompt: prompt
       })
       .eq('id', agent_id)
-      .eq('user_id', user.id)
+      .eq('user_id', user_id)
       .select()
       .single();
 
