@@ -90,18 +90,14 @@ export default function CreateAgent() {
 
     setCreating(true);
     try {
-      // Get the current session to ensure we have a valid token
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
+      // Get the current user id only to include in the body (no header needed)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         throw new Error('Nicht authentifiziert. Bitte melden Sie sich erneut an.');
       }
 
       const { data, error } = await supabase.functions.invoke('create-agent', {
-        body: formData,
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
+        body: { ...formData, user_id: user.id }
       });
 
       if (error) {

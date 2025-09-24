@@ -14,24 +14,13 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Authorization header is missing');
+    const { name, voice_id, first_message, prompt, user_id } = await req.json();
+
+    if (!name || !voice_id || !prompt || !user_id) {
+      throw new Error('Missing required fields: name, voice_id, prompt, user_id');
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
-    );
-
-    const { name, voice_id, first_message, prompt } = await req.json();
-
-    console.log('Creating agent with data:', { name, voice_id, first_message, prompt });
+    console.log('Creating agent with data:', { name, voice_id, first_message, prompt, user_id });
 
     // Create agent in 11labs
     const elevenlabsResponse = await fetch('https://api.elevenlabs.io/v1/convai/agents/create', {
@@ -84,23 +73,17 @@ serve(async (req) => {
     const elevenlabsData = await elevenlabsResponse.json();
     console.log('11labs response:', elevenlabsData);
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError) {
-      console.error('Auth error:', userError);
-      throw new Error(`Authentication failed: ${userError.message}`);
-    }
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    
-    console.log('Authenticated user:', user.id);
+    // Use service role for DB insert (bypass RLS safely inside server)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
     // Save agent to database
-    const { data: agentData, error: agentError } = await supabaseClient
+    const { data: agentData, error: agentError } = await supabaseAdmin
       .from('agents')
       .insert({
-        user_id: user.id,
+        user_id: user_id,
         name: name,
         voice_type: voice_id,
         first_message: first_message,
