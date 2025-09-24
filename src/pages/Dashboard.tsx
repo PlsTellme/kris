@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
   Phone, 
   CheckCircle, 
@@ -12,16 +13,21 @@ import {
   Clock, 
   Filter, 
   Search,
-  Calendar
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  FileText
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { formatInTimeZone } from "date-fns-tz";
 
 export default function Dashboard() {
   const [callLogs, setCallLogs] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAgent, setSelectedAgent] = useState<string>("all");
+  const [expandedTranscripts, setExpandedTranscripts] = useState<Set<string>>(new Set());
   
   const { toast } = useToast();
 
@@ -51,13 +57,10 @@ export default function Dashboard() {
     try {
       setLoading(true);
       
-      // Get call logs with agent information
+      // Get call logs - RLS will automatically filter by user's agents
       const { data, error } = await supabase
         .from('call_logs')
-        .select(`
-          *,
-          agents!inner(name, user_id)
-        `)
+        .select('*')
         .order('call_timestamp_unix', { ascending: false });
 
       if (error) throw error;
@@ -75,20 +78,35 @@ export default function Dashboard() {
   };
 
   const formatUnixTimestamp = (unixTimestamp: number) => {
-    return new Date(unixTimestamp * 1000).toLocaleString('de-DE', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+    try {
+      // Convert unix timestamp to Date and format for Europe/Paris timezone
+      const date = new Date(unixTimestamp * 1000);
+      return formatInTimeZone(date, 'Europe/Paris', 'dd.MM.yyyy HH:mm:ss');
+    } catch (error) {
+      console.error('Error formatting timestamp:', error);
+      return 'Ungültiges Datum';
+    }
   };
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const toggleTranscript = (logId: string) => {
+    const newExpanded = new Set(expandedTranscripts);
+    if (newExpanded.has(logId)) {
+      newExpanded.delete(logId);
+    } else {
+      newExpanded.add(logId);
+    }
+    setExpandedTranscripts(newExpanded);
+  };
+
+  const getAgentName = (elevenlabsAgentId: string) => {
+    const agent = agents.find(a => a.elevenlabs_agent_id === elevenlabsAgentId);
+    return agent?.name || 'Unbekannter Agent';
   };
 
   const filteredCallLogs = selectedAgent === "all" 
@@ -204,38 +222,82 @@ export default function Dashboard() {
               </p>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Agent</TableHead>
-                    <TableHead>Anrufer</TableHead>
-                    <TableHead>Dauer</TableHead>
-                    <TableHead>Zeitpunkt</TableHead>
-                    <TableHead>Transkript</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCallLogs.map((log) => {
-                    const agent = agents.find(a => a.elevenlabs_agent_id === log.elevenlabs_agent_id);
-                    return (
-                      <TableRow key={log.id}>
-                        <TableCell className="font-medium">
-                          {agent?.name || 'Unbekannt'}
-                        </TableCell>
-                        <TableCell>{log.caller_number}</TableCell>
-                        <TableCell>{formatDuration(log.duration)}</TableCell>
-                        <TableCell>{formatUnixTimestamp(log.call_timestamp_unix)}</TableCell>
-                        <TableCell className="max-w-xs">
-                          <div className="truncate" title={log.transcript || 'Kein Transkript'}>
-                            {log.transcript || 'Kein Transkript verfügbar'}
+            <div className="space-y-4">
+              {filteredCallLogs.map((log) => (
+                <Card key={log.id} className="border-l-4 border-l-primary/20">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-primary" />
+                          <div>
+                            <p className="font-semibold">{getAgentName(log.elevenlabs_agent_id)}</p>
+                            <p className="text-sm text-muted-foreground">Agent</p>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">{formatUnixTimestamp(log.call_timestamp_unix)}</p>
+                            <p className="text-sm text-muted-foreground">Anrufdatum (Paris Zeit)</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">{formatDuration(log.duration)}</p>
+                            <p className="text-sm text-muted-foreground">Dauer</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">{log.caller_number}</p>
+                            <p className="text-sm text-muted-foreground">Anrufer</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {log.transcript && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleTranscript(log.id)}
+                          className="flex items-center gap-2"
+                        >
+                          <FileText className="h-4 w-4" />
+                          Transkript
+                          {expandedTranscripts.has(log.id) ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {log.transcript && expandedTranscripts.has(log.id) && (
+                      <div className="mt-4 p-4 bg-muted rounded-lg">
+                        <h4 className="font-semibold mb-2 text-sm text-muted-foreground">TRANSKRIPT:</h4>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                          {log.transcript}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {!log.transcript && (
+                      <div className="mt-2">
+                        <Badge variant="secondary" className="text-xs">
+                          Kein Transkript verfügbar
+                        </Badge>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </CardContent>
