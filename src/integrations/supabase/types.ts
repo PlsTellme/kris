@@ -55,8 +55,7 @@ export type Database = {
       }
       call_logs: {
         Row: {
-          agent_name: string
-          call_timestamp: string
+          call_timestamp_unix: number
           caller_number: string
           created_at: string
           duration: number
@@ -64,11 +63,9 @@ export type Database = {
           id: string
           transcript: string | null
           updated_at: string
-          user_id: string
         }
         Insert: {
-          agent_name: string
-          call_timestamp?: string
+          call_timestamp_unix?: number
           caller_number: string
           created_at?: string
           duration?: number
@@ -76,11 +73,9 @@ export type Database = {
           id?: string
           transcript?: string | null
           updated_at?: string
-          user_id: string
         }
         Update: {
-          agent_name?: string
-          call_timestamp?: string
+          call_timestamp_unix?: number
           caller_number?: string
           created_at?: string
           duration?: number
@@ -88,7 +83,6 @@ export type Database = {
           id?: string
           transcript?: string | null
           updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
