@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 export default function PhoneNumbers() {
   const [outboundNumber, setOutboundNumber] = useState("");
   const [selectedAgent, setSelectedAgent] = useState("");
+  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState("");
   const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,26 +66,63 @@ export default function PhoneNumbers() {
   };
   const handleAssignAgent = async (phoneId: string, agentId: string) => {
     try {
-      console.log(`Assigning agent ${agentId === 'none' ? 'null' : agentId} to phone ${phoneId}`);
+      const phone = phoneNumbers.find(p => p.id === phoneId);
+      if (!phone) return;
 
-      // TODO: Update when types are refreshed
-      // const { error } = await supabase
-      //   .from('phone_numbers')
-      //   .update({ assigned_agent: agentId === 'none' ? null : agentId })
-      //   .eq('id', phoneId);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-      // if (error) {
-      //   console.error('Error assigning agent:', error);
-      //   return;
-      // }
+      const { data, error } = await supabase.functions.invoke('assign-agent', {
+        body: {
+          phone_id: phoneId,
+          agent_id: agentId === 'none' ? null : agentId,
+          phonenumber_id: phone.phonenumber_id,
+          user_id: user.id
+        }
+      });
 
-      // loadPhoneNumbers();
+      if (error) {
+        console.error('Error assigning agent:', error);
+        return;
+      }
+
+      console.log('Agent assigned successfully:', data);
+      loadPhoneNumbers();
     } catch (error) {
       console.error('Error assigning agent:', error);
     }
   };
-  const handleOutboundCall = () => {
-    console.log("Starting outbound call to:", outboundNumber, "with agent:", selectedAgent);
+  const handleOutboundCall = async () => {
+    try {
+      if (!selectedPhoneNumber || !selectedAgent || !outboundNumber) {
+        console.error('Missing required fields for outbound call');
+        return;
+      }
+
+      const phone = phoneNumbers.find(p => p.id === selectedPhoneNumber);
+      if (!phone) return;
+
+      const { data, error } = await supabase.functions.invoke('outbound-call', {
+        body: {
+          agent_id: selectedAgent,
+          phone_number_id: phone.phonenumber_id,
+          to_number: outboundNumber
+        }
+      });
+
+      if (error) {
+        console.error('Error starting outbound call:', error);
+        return;
+      }
+
+      console.log('Outbound call started successfully:', data);
+      // Reset form
+      setOutboundNumber("");
+      setSelectedAgent("");
+      setSelectedPhoneNumber("");
+    } catch (error) {
+      console.error('Error starting outbound call:', error);
+    }
   };
   return <div className="space-y-8">
       <div>
@@ -160,6 +198,20 @@ export default function PhoneNumbers() {
         <CardContent>
           <div className="grid gap-4 max-w-md">
             <div className="space-y-2">
+              <Label htmlFor="phone-select">Telefonnummer (Von)</Label>
+              <Select value={selectedPhoneNumber} onValueChange={setSelectedPhoneNumber}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Wählen Sie eine Telefonnummer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {phoneNumbers.map(phone => <SelectItem key={phone.id} value={phone.id}>
+                      {phone.phone_number}
+                    </SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="agent-select">Agent auswählen</Label>
               <Select value={selectedAgent} onValueChange={setSelectedAgent}>
                 <SelectTrigger>
@@ -174,18 +226,31 @@ export default function PhoneNumbers() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="phone-number">Telefonnummer</Label>
-              <Input id="phone-number" placeholder="+49 30 12345678" value={outboundNumber} onChange={e => setOutboundNumber(e.target.value)} />
+              <Label htmlFor="phone-number">Telefonnummer (An)</Label>
+              <Input 
+                id="phone-number" 
+                placeholder="+49 30 12345678 oder +43 1 12345678" 
+                value={outboundNumber} 
+                onChange={e => setOutboundNumber(e.target.value)} 
+                pattern="^\+4[39]\d{8,15}$"
+              />
             </div>
             
-            <Button onClick={handleOutboundCall} disabled={!outboundNumber || !selectedAgent} className="w-full">
+            <Button 
+              onClick={handleOutboundCall} 
+              disabled={!outboundNumber || !selectedAgent || !selectedPhoneNumber} 
+              className="w-full"
+            >
               <PhoneCall className="h-4 w-4 mr-2" />
               Anruf starten
             </Button>
             
-            {agents.length === 0 && <p className="text-sm text-muted-foreground">
-                Erstellen Sie zuerst einen Agent, um Anrufe zu tätigen
-              </p>}
+            {(agents.length === 0 || phoneNumbers.length === 0) && (
+              <p className="text-sm text-muted-foreground">
+                {agents.length === 0 && "Erstellen Sie zuerst einen Agent, um Anrufe zu tätigen"}
+                {phoneNumbers.length === 0 && agents.length > 0 && "Kaufen Sie zuerst eine Telefonnummer, um Anrufe zu tätigen"}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
