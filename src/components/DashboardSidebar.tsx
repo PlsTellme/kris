@@ -75,7 +75,7 @@ export function DashboardSidebar({ userProfile }: DashboardSidebarProps) {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-foreground font-medium">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -92,9 +92,9 @@ export function DashboardSidebar({ userProfile }: DashboardSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {userProfile?.subscription_type === 'premium' && (
+        {userProfile?.is_premium && (
           <SidebarGroup>
-            <SidebarGroupLabel>Premium Features</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-foreground font-medium">Premium Features</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {premiumMenuItems.map((item) => (
