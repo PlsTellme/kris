@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,6 +27,26 @@ serve(async (req) => {
 
     console.log('Starting outbound call:', { agent_id, phone_number_id, to_number });
 
+    // Use service role for DB access to get elevenlabs_agent_id
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Get the elevenlabs_agent_id from database
+    const { data: agentData, error: agentError } = await supabaseAdmin
+      .from('agents')
+      .select('elevenlabs_agent_id')
+      .eq('id', agent_id)
+      .single();
+
+    if (agentError || !agentData) {
+      throw new Error(`Agent not found: ${agentError?.message || 'Unknown error'}`);
+    }
+
+    const elevenlabsAgentId = agentData.elevenlabs_agent_id;
+    console.log('Using Eleven Labs agent ID:', elevenlabsAgentId);
+
     // Make outbound call via Eleven Labs
     const elevenlabsResponse = await fetch('https://api.elevenlabs.io/v1/convai/twilio/outbound-call', {
       method: 'POST',
@@ -34,7 +55,7 @@ serve(async (req) => {
         'xi-api-key': Deno.env.get('ELEVENLABS_API_KEY') ?? '',
       },
       body: JSON.stringify({
-        agent_id: agent_id,
+        agent_id: elevenlabsAgentId,
         agent_phone_number_id: phone_number_id,
         to_number: to_number
       }),

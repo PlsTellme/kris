@@ -22,6 +22,30 @@ serve(async (req) => {
 
     console.log('Assigning agent:', { phone_id, agent_id, phonenumber_id, user_id });
 
+    // Use service role for DB access
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    let elevenlabsAgentId = null;
+    if (agent_id) {
+      // Get the elevenlabs_agent_id from database
+      const { data: agentData, error: agentError } = await supabaseAdmin
+        .from('agents')
+        .select('elevenlabs_agent_id')
+        .eq('id', agent_id)
+        .eq('user_id', user_id)
+        .single();
+
+      if (agentError || !agentData) {
+        throw new Error(`Agent not found: ${agentError?.message || 'Unknown error'}`);
+      }
+
+      elevenlabsAgentId = agentData.elevenlabs_agent_id;
+      console.log('Using Eleven Labs agent ID:', elevenlabsAgentId);
+    }
+
     // Update phone number assignment in Eleven Labs
     const elevenlabsResponse = await fetch(`https://api.elevenlabs.io/v1/convai/phone-numbers/${phonenumber_id}`, {
       method: 'PATCH',
@@ -30,7 +54,7 @@ serve(async (req) => {
         'xi-api-key': Deno.env.get('ELEVENLABS_API_KEY') ?? '',
       },
       body: JSON.stringify({
-        agent_id: agent_id || null
+        agent_id: elevenlabsAgentId
       }),
     });
 
@@ -39,12 +63,6 @@ serve(async (req) => {
       console.error('11labs API error:', error);
       throw new Error(`11labs API error: ${error}`);
     }
-
-    // Use service role for DB update
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
 
     // Update phone number in database
     const { data, error } = await supabaseAdmin
