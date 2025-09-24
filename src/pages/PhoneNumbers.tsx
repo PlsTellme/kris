@@ -67,13 +67,12 @@ export default function PhoneNumbers() {
 
   const handleAssignAgent = async (phoneId: string, agentId: string) => {
     try {
-      // For now, we'll just log this until the database types are updated
-      console.log(`Assigning agent ${agentId} to phone ${phoneId}`);
+      console.log(`Assigning agent ${agentId === 'none' ? 'null' : agentId} to phone ${phoneId}`);
       
       // TODO: Update when types are refreshed
       // const { error } = await supabase
       //   .from('phone_numbers')
-      //   .update({ assigned_agent: agentId || null })
+      //   .update({ assigned_agent: agentId === 'none' ? null : agentId })
       //   .eq('id', phoneId);
 
       // if (error) {
@@ -149,7 +148,7 @@ export default function PhoneNumbers() {
                         <SelectValue placeholder="Agent zuweisen" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Kein Agent</SelectItem>
+                        <SelectItem value="none">Kein Agent</SelectItem>
                         {agents.map((agent) => (
                           <SelectItem key={agent.id} value={agent.id}>
                             {agent.name}
