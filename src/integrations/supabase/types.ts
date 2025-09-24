@@ -55,6 +55,7 @@ export type Database = {
       }
       phone_numbers: {
         Row: {
+          assigned_agent: string | null
           created_at: string
           id: string
           phone_number: string
@@ -63,6 +64,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          assigned_agent?: string | null
           created_at?: string
           id?: string
           phone_number: string
@@ -71,6 +73,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          assigned_agent?: string | null
           created_at?: string
           id?: string
           phone_number?: string
@@ -78,7 +81,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "phone_numbers_assigned_agent_fkey"
+            columns: ["assigned_agent"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
