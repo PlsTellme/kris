@@ -27,10 +27,12 @@ import { useToast } from "@/hooks/use-toast";
 
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+];
+
+const premiumMenuItems = [
   { title: "Agent erstellen", url: "/create-agent", icon: Plus },
   { title: "Agenten verwalten", url: "/manage-agents", icon: Bot },
   { title: "Telefonnummern", url: "/phone-numbers", icon: Phone },
-  { title: "Einstellungen", url: "/settings", icon: Settings },
 ];
 
 interface DashboardSidebarProps {
@@ -57,7 +59,7 @@ export function DashboardSidebar({ userProfile }: DashboardSidebarProps) {
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
     isActive 
       ? "bg-primary text-primary-foreground font-medium hover:bg-primary/90" 
-      : "hover:bg-muted text-muted-foreground";
+      : "hover:bg-muted text-foreground";
 
   return (
     <Sidebar className="border-r border-border">
@@ -89,6 +91,41 @@ export function DashboardSidebar({ userProfile }: DashboardSidebarProps) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {userProfile?.subscription_type === 'premium' && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Premium Features</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {premiumMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.url} className={getNavClass}>
+                        <item.icon className="mr-3 h-4 w-4" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink to="/settings" className={getNavClass}>
+                    <Settings className="mr-3 h-4 w-4" />
+                    <span>Einstellungen</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-border">
@@ -110,7 +147,7 @@ export function DashboardSidebar({ userProfile }: DashboardSidebarProps) {
         <Button 
           variant="ghost" 
           onClick={handleSignOut}
-          className="w-full justify-start text-muted-foreground hover:text-foreground"
+          className="w-full justify-start text-foreground hover:text-foreground hover:bg-muted"
         >
           <LogOut className="mr-3 h-4 w-4" />
           Abmelden

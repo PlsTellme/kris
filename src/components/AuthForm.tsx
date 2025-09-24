@@ -52,7 +52,7 @@ export function AuthForm() {
     } else {
       toast({
         title: "Registrierung erfolgreich",
-        description: "Sie wurden erfolgreich registriert und sind nun angemeldet.",
+        description: "Bitte prüfen Sie Ihre E-Mails zur Verifizierung Ihres Accounts.",
       });
     }
     setIsLoading(false);

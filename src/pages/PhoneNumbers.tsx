@@ -4,151 +4,182 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Phone, PhoneCall, Settings, Bot } from "lucide-react";
+import { Phone, PhoneCall, Plus, Settings } from "lucide-react";
 
 export default function PhoneNumbers() {
   const [outboundNumber, setOutboundNumber] = useState("");
+  const [selectedAgent, setSelectedAgent] = useState("");
 
-  const mockAgents = [
+  // Mock phone numbers data
+  const phoneNumbers = [
     {
       id: 1,
-      name: "Immobilien-Assistent Max",
-      phoneNumber: "+49 30 12345678",
+      number: "+49 30 12345678",
       status: "aktiv",
+      assignedAgent: null,
+    },
+    {
+      id: 2,
+      number: "+49 30 87654321",
+      status: "inaktiv",
+      assignedAgent: null,
+    },
+    {
+      id: 3,
+      number: "+49 30 11223344",
+      status: "aktiv",
+      assignedAgent: null,
     },
   ];
 
+  // Mock agents for dropdown (will be populated from database later)
+  const availableAgents = [
+    { id: 1, name: "Kein Agent verfügbar - Premium erforderlich" },
+  ];
+
   const handleOutboundCall = () => {
-    if (!outboundNumber) return;
+    if (!outboundNumber || !selectedAgent) return;
     
-    // Here would be the actual outbound call logic
-    console.log("Starting outbound call to:", outboundNumber);
+    console.log("Starting outbound call:", { number: outboundNumber, agent: selectedAgent });
   };
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Telefonnummern</h1>
-        <p className="text-muted-foreground">Verwalten Sie Telefonnummern für Ihre Agenten</p>
+        <p className="text-muted-foreground">Verwalten Sie Ihre Telefonnummern und Agenten-Zuordnungen</p>
       </div>
 
-      {/* Agent Phone Numbers */}
+      {/* Available Phone Numbers */}
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Phone className="h-5 w-5" />
-            Agent Telefonnummern
+            Verfügbare Telefonnummern
           </CardTitle>
           <CardDescription>
-            Zugewiesene Telefonnummern für Ihre KI-Agenten
+            Weisen Sie Ihren Agenten Telefonnummern zu
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {mockAgents.length === 0 ? (
-            <div className="text-center py-8">
-              <Bot className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                Keine Agenten mit zugewiesenen Telefonnummern gefunden
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {mockAgents.map((agent) => (
-                <div key={agent.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Bot className="h-8 w-8 text-primary" />
-                    <div>
-                      <h3 className="font-medium">{agent.name}</h3>
-                      <p className="text-sm text-muted-foreground">{agent.phoneNumber}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={agent.status === 'aktiv' ? 'default' : 'secondary'}>
-                      {agent.status}
-                    </Badge>
-                    <Button size="sm" variant="outline">
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                    
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm">
-                          <PhoneCall className="h-4 w-4 mr-2" />
-                          Anrufen
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Outbound Call starten</DialogTitle>
-                          <DialogDescription>
-                            Starten Sie einen ausgehenden Anruf mit {agent.name}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="phone-number">Telefonnummer</Label>
-                            <Input
-                              id="phone-number"
-                              placeholder="+49 30 12345678"
-                              value={outboundNumber}
-                              onChange={(e) => setOutboundNumber(e.target.value)}
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <Button 
-                              onClick={handleOutboundCall} 
-                              className="flex-1"
-                              disabled={!outboundNumber}
-                            >
-                              <PhoneCall className="h-4 w-4 mr-2" />
-                              Anruf starten
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+          <div className="space-y-4">
+            {phoneNumbers.map((phoneNumber) => (
+              <div key={phoneNumber.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Phone className="h-6 w-6 text-primary" />
+                  <div>
+                    <h3 className="font-medium">{phoneNumber.number}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {phoneNumber.assignedAgent ? `Zugewiesen: ${phoneNumber.assignedAgent}` : "Nicht zugewiesen"}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="flex items-center gap-3">
+                  <Badge variant={phoneNumber.status === 'aktiv' ? 'default' : 'secondary'}>
+                    {phoneNumber.status}
+                  </Badge>
+                  <Select defaultValue="">
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Agent zuweisen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Kein Agent</SelectItem>
+                      {availableAgents.map((agent) => (
+                        <SelectItem key={agent.id} value={agent.id.toString()} disabled>
+                          {agent.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" variant="outline">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Quick Outbound Call */}
+      {/* Outbound Call */}
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <PhoneCall className="h-5 w-5" />
-            Schneller Outbound Call
+            Outbound Call starten
           </CardTitle>
           <CardDescription>
-            Starten Sie direkt einen ausgehenden Anruf
+            Wählen Sie einen Agent und eine Nummer für einen ausgehenden Anruf
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 max-w-md">
-            <div className="flex-1">
+          <div className="grid gap-4 max-w-md">
+            <div className="space-y-2">
+              <Label htmlFor="agent-select">Agent auswählen</Label>
+              <Select value={selectedAgent} onValueChange={setSelectedAgent}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Wählen Sie einen Agent" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableAgents.map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id.toString()} disabled>
+                      {agent.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="phone-number">Telefonnummer</Label>
               <Input
-                placeholder="Telefonnummer eingeben..."
+                id="phone-number"
+                placeholder="+49 30 12345678"
                 value={outboundNumber}
                 onChange={(e) => setOutboundNumber(e.target.value)}
               />
             </div>
+            
             <Button 
               onClick={handleOutboundCall}
-              disabled={!outboundNumber || mockAgents.length === 0}
+              disabled={!outboundNumber || !selectedAgent}
+              className="w-full"
             >
               <PhoneCall className="h-4 w-4 mr-2" />
-              Anrufen
+              Anruf starten
+            </Button>
+            
+            <p className="text-sm text-muted-foreground">
+              Erstellen Sie zuerst einen Premium-Agent, um Anrufe zu tätigen
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Add New Number */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Neue Nummer hinzufügen
+          </CardTitle>
+          <CardDescription>
+            Neue Telefonnummer zu Ihrem Account hinzufügen
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <Phone className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-semibold mb-2">Premium Feature</h3>
+            <p className="text-muted-foreground mb-4">
+              Das Hinzufügen neuer Telefonnummern ist nur in der Premium-Version verfügbar
+            </p>
+            <Button variant="outline">
+              Auf Premium upgraden
             </Button>
           </div>
-          {mockAgents.length === 0 && (
-            <p className="text-sm text-muted-foreground mt-2">
-              Erstellen Sie zuerst einen Agenten, um Anrufe zu tätigen
-            </p>
-          )}
         </CardContent>
       </Card>
     </div>
