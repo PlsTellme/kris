@@ -1,48 +1,72 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Phone, PhoneCall, Plus, Settings } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Phone, PhoneCall, Plus, Settings, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function PhoneNumbers() {
   const [outboundNumber, setOutboundNumber] = useState("");
   const [selectedAgent, setSelectedAgent] = useState("");
+  const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]);
+  const [agents, setAgents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock phone numbers data
-  const phoneNumbers = [
-    {
-      id: 1,
-      number: "+49 30 12345678",
-      status: "aktiv",
-      assignedAgent: null,
-    },
-    {
-      id: 2,
-      number: "+49 30 87654321",
-      status: "inaktiv",
-      assignedAgent: null,
-    },
-    {
-      id: 3,
-      number: "+49 30 11223344",
-      status: "aktiv",
-      assignedAgent: null,
-    },
-  ];
+  useEffect(() => {
+    loadPhoneNumbers();
+    loadAgents();
+  }, []);
 
-  // Mock agents for dropdown (will be populated from database later)
-  const availableAgents = [
-    { id: 1, name: "Kein Agent verfügbar - Premium erforderlich" },
-  ];
+  const loadPhoneNumbers = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: phoneData, error } = await supabase
+        .from('phone_numbers')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading phone numbers:', error);
+        return;
+      }
+
+      setPhoneNumbers(phoneData || []);
+    } catch (error) {
+      console.error('Error loading phone numbers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAgents = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: agentsData, error } = await supabase
+        .from('agents')
+        .select('id, name')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error loading agents:', error);
+        return;
+      }
+
+      setAgents(agentsData || []);
+    } catch (error) {
+      console.error('Error loading agents:', error);
+    }
+  };
 
   const handleOutboundCall = () => {
-    if (!outboundNumber || !selectedAgent) return;
-    
-    console.log("Starting outbound call:", { number: outboundNumber, agent: selectedAgent });
+    console.log("Starting outbound call to:", outboundNumber, "with agent:", selectedAgent);
   };
 
   return (
@@ -52,59 +76,62 @@ export default function PhoneNumbers() {
         <p className="text-muted-foreground">Verwalten Sie Ihre Telefonnummern und Agenten-Zuordnungen</p>
       </div>
 
-      {/* Available Phone Numbers */}
-      <Card className="shadow-card">
+      {/* Verfügbare Telefonnummern */}
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Phone className="h-5 w-5" />
             Verfügbare Telefonnummern
           </CardTitle>
           <CardDescription>
-            Weisen Sie Ihren Agenten Telefonnummern zu
+            Ihre verfügbaren Telefonnummern und deren Status
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {phoneNumbers.map((phoneNumber) => (
-              <div key={phoneNumber.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Phone className="h-6 w-6 text-primary" />
-                  <div>
-                    <h3 className="font-medium">{phoneNumber.number}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {phoneNumber.assignedAgent ? `Zugewiesen: ${phoneNumber.assignedAgent}` : "Nicht zugewiesen"}
-                    </p>
+          {loading ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Laden...</p>
+            </div>
+          ) : phoneNumbers.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Keine Telefonnummern verfügbar</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {phoneNumbers.map((phone) => (
+                <div
+                  key={phone.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="flex items-center space-x-4">
+                    <Phone className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <div className="font-medium">{phone.phone_number}</div>
+                      <div className="text-sm text-muted-foreground">ID: {phone.phonenumber_id}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="text-right">
+                      <Badge variant="default">
+                        Aktiv
+                      </Badge>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Keine Zuweisung
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      <Settings className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant={phoneNumber.status === 'aktiv' ? 'default' : 'secondary'}>
-                    {phoneNumber.status}
-                  </Badge>
-                  <Select defaultValue="">
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Agent zuweisen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Kein Agent</SelectItem>
-                      {availableAgents.map((agent) => (
-                        <SelectItem key={agent.id} value={agent.id.toString()} disabled>
-                          {agent.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" variant="outline">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Outbound Call */}
-      <Card className="shadow-card">
+      {/* Outbound Call starten */}
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <PhoneCall className="h-5 w-5" />
@@ -123,8 +150,8 @@ export default function PhoneNumbers() {
                   <SelectValue placeholder="Wählen Sie einen Agent" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableAgents.map((agent) => (
-                    <SelectItem key={agent.id} value={agent.id.toString()} disabled>
+                  {agents.map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id}>
                       {agent.name}
                     </SelectItem>
                   ))}
@@ -151,15 +178,17 @@ export default function PhoneNumbers() {
               Anruf starten
             </Button>
             
-            <p className="text-sm text-muted-foreground">
-              Erstellen Sie zuerst einen Premium-Agent, um Anrufe zu tätigen
-            </p>
+            {agents.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Erstellen Sie zuerst einen Agent, um Anrufe zu tätigen
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Add New Number */}
-      <Card className="shadow-card">
+      {/* Neue Nummer hinzufügen */}
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
@@ -177,6 +206,7 @@ export default function PhoneNumbers() {
               Das Hinzufügen neuer Telefonnummern ist nur in der Premium-Version verfügbar
             </p>
             <Button variant="outline">
+              <Sparkles className="mr-2 h-4 w-4" />
               Auf Premium upgraden
             </Button>
           </div>

@@ -129,22 +129,24 @@ export function DashboardSidebar({ userProfile }: DashboardSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-border">
-        {userProfile && (
-          <div className="mb-4 p-3 bg-muted rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">{userProfile.username}</p>
-                <p className="text-xs text-muted-foreground capitalize">
-                  {userProfile.subscription_type}
-                </p>
+      <SidebarFooter>
+        <div className="p-4 border-t border-sidebar-border bg-sidebar-background">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-sidebar-primary rounded-full flex items-center justify-center">
+              <span className="text-sidebar-primary-foreground text-sm font-medium">
+                {userProfile?.username?.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-sidebar-foreground truncate">
+                {userProfile?.username}
               </div>
-              <div className={`w-2 h-2 rounded-full ${
-                userProfile.is_premium ? 'bg-primary' : 'bg-muted-foreground'
-              }`} />
+              <div className="text-xs text-sidebar-foreground/70">
+                {userProfile?.is_premium ? 'Premium' : 'Free'}
+              </div>
             </div>
           </div>
-        )}
+        </div>
         <Button 
           variant="ghost" 
           onClick={handleSignOut}

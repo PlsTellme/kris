@@ -8,42 +8,119 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Bot, Crown, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
 
 export default function CreateAgent() {
   const [subscriptionType, setSubscriptionType] = useState<string>('free');
   const [loading, setLoading] = useState(true);
+  const [voices, setVoices] = useState<Array<{id: string, name: string, voice_id: string, gender: string}>>([]);
+  const [formData, setFormData] = useState({
+    name: '',
+    voice_id: '',
+    first_message: '',
+    prompt: ''
+  });
+  const [creating, setCreating] = useState(false);
+  
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     checkSubscription();
+    loadVoices();
   }, []);
 
   const checkSubscription = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('is_premium')
+          .select('subscription_type, is_premium, minutes_used, minutes_limit')
           .eq('user_id', user.id)
           .maybeSingle();
-        
+
         if (profile) {
-          setSubscriptionType(profile.is_premium ? 'premium' : 'free');
+          setSubscriptionType(profile.subscription_type || 'free');
         }
       }
     } catch (error) {
-      console.error('Error checking subscription:', error);
+      console.error('Error fetching subscription:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const voiceOptions = [
-    { value: "sarah", label: "Sarah (Weiblich, Deutsch)" },
-    { value: "max", label: "Max (Männlich, Deutsch)" },
-    { value: "emma", label: "Emma (Weiblich, Österreichisch)" },
-    { value: "jonas", label: "Jonas (Männlich, Schweizerdeutsch)" },
-  ];
+  const loadVoices = async () => {
+    try {
+      const { data: voicesData, error } = await supabase
+        .from('voices')
+        .select('*')
+        .order('name');
+
+      if (error) {
+        console.error('Error loading voices:', error);
+        return;
+      }
+
+      setVoices(voicesData || []);
+    } catch (error) {
+      console.error('Error loading voices:', error);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleCreateAgent = async () => {
+    if (!formData.name || !formData.voice_id || !formData.prompt) {
+      toast({
+        title: "Fehler",
+        description: "Bitte füllen Sie alle erforderlichen Felder aus.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-agent', {
+        body: formData
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Unbekannter Fehler');
+      }
+
+      toast({
+        title: "Erfolg",
+        description: "Agent wurde erfolgreich erstellt!"
+      });
+
+      // Navigate to manage agents
+      navigate('/manage-agents');
+      
+    } catch (error: any) {
+      console.error('Error creating agent:', error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Fehler beim Erstellen des Agenten",
+        variant: "destructive"
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -111,20 +188,21 @@ export default function CreateAgent() {
             <Input
               id="agent-name"
               placeholder="z.B. Immobilien-Assistent Max"
-              required
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="voice-type">Stimme auswählen *</Label>
-            <Select>
+            <Select value={formData.voice_id} onValueChange={(value) => handleInputChange('voice_id', value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Wählen Sie eine Stimme" />
+                <SelectValue placeholder="Stimme auswählen" />
               </SelectTrigger>
               <SelectContent>
-                {voiceOptions.map((voice) => (
-                  <SelectItem key={voice.value} value={voice.value}>
-                    {voice.label}
+                {voices.map((voice) => (
+                  <SelectItem key={voice.id} value={voice.voice_id}>
+                    {voice.name} ({voice.gender === 'male' ? 'Männlich' : 'Weiblich'})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -132,12 +210,13 @@ export default function CreateAgent() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="first-message">Erste Nachricht *</Label>
+            <Label htmlFor="first-message">Erste Nachricht (optional)</Label>
             <Textarea
               id="first-message"
-              placeholder="Hallo, mein Name ist Max und ich rufe von der Immobilienagentur XY an. Hätten Sie einen Moment Zeit für ein kurzes Gespräch über..."
+              placeholder="Hallo, mein Name ist Max und ich rufe von der Immobilienagentur..."
               className="min-h-[100px]"
-              required
+              value={formData.first_message}
+              onChange={(e) => handleInputChange('first_message', e.target.value)}
             />
             <p className="text-sm text-muted-foreground">
               Diese Nachricht wird zu Beginn jedes Anrufs abgespielt
@@ -148,9 +227,10 @@ export default function CreateAgent() {
             <Label htmlFor="agent-prompt">Agent Prompt *</Label>
             <Textarea
               id="agent-prompt"
-              placeholder="Du bist ein professioneller Immobilienmakler-Assistent. Deine Aufgabe ist es, höflich und kompetent potenzielle Interessenten anzusprechen und Termine zu vereinbaren. Verhalte dich stets professionell und freundlich..."
+              placeholder="Du bist ein professioneller Immobilienmakler. Deine Aufgabe ist es..."
               className="min-h-[150px]"
-              required
+              value={formData.prompt}
+              onChange={(e) => handleInputChange('prompt', e.target.value)}
             />
             <p className="text-sm text-muted-foreground">
               Definieren Sie hier das Verhalten und die Persönlichkeit Ihres Agenten
@@ -158,12 +238,20 @@ export default function CreateAgent() {
           </div>
 
           <div className="flex gap-4 pt-4">
-            <Button variant="outline" className="flex-1">
+            <Button 
+              variant="outline" 
+              className="flex-1"
+              disabled={creating}
+            >
               <Bot className="mr-2 h-4 w-4" />
               Vorschau testen
             </Button>
-            <Button className="flex-1">
-              Agent erstellen
+            <Button 
+              className="flex-1"
+              onClick={handleCreateAgent}
+              disabled={creating}
+            >
+              {creating ? 'Erstelle Agent...' : 'Agent erstellen'}
             </Button>
           </div>
         </CardContent>

@@ -17,6 +17,7 @@ export type Database = {
       agents: {
         Row: {
           created_at: string
+          elevenlabs_agent_id: string | null
           first_message: string | null
           id: string
           name: string
@@ -28,6 +29,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          elevenlabs_agent_id?: string | null
           first_message?: string | null
           id?: string
           name: string
@@ -39,6 +41,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          elevenlabs_agent_id?: string | null
           first_message?: string | null
           id?: string
           name?: string
@@ -47,6 +50,33 @@ export type Database = {
           updated_at?: string
           user_id?: string
           voice_type?: string | null
+        }
+        Relationships: []
+      }
+      phone_numbers: {
+        Row: {
+          created_at: string
+          id: string
+          phone_number: string
+          phonenumber_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          phone_number: string
+          phonenumber_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          phone_number?: string
+          phonenumber_id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -86,6 +116,30 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string
+        }
+        Relationships: []
+      }
+      voices: {
+        Row: {
+          created_at: string
+          gender: string
+          id: string
+          name: string
+          voice_id: string
+        }
+        Insert: {
+          created_at?: string
+          gender: string
+          id?: string
+          name: string
+          voice_id: string
+        }
+        Update: {
+          created_at?: string
+          gender?: string
+          id?: string
+          name?: string
+          voice_id?: string
         }
         Relationships: []
       }
