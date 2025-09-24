@@ -39,6 +39,7 @@ interface DashboardSidebarProps {
   userProfile?: {
     username: string;
     subscription_type: string;
+    is_premium: boolean;
   };
 }
 
@@ -139,7 +140,7 @@ export function DashboardSidebar({ userProfile }: DashboardSidebarProps) {
                 </p>
               </div>
               <div className={`w-2 h-2 rounded-full ${
-                userProfile.subscription_type === 'premium' ? 'bg-primary' : 'bg-muted-foreground'
+                userProfile.is_premium ? 'bg-primary' : 'bg-muted-foreground'
               }`} />
             </div>
           </div>

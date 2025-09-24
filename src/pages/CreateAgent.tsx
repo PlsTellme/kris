@@ -23,12 +23,12 @@ export default function CreateAgent() {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('subscription_type')
+          .select('is_premium')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         
         if (profile) {
-          setSubscriptionType(profile.subscription_type);
+          setSubscriptionType(profile.is_premium ? 'premium' : 'free');
         }
       }
     } catch (error) {

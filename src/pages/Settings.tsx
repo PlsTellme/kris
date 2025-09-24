@@ -22,6 +22,7 @@ interface Profile {
   username: string;
   full_name?: string;
   subscription_type: string;
+  is_premium: boolean;
   minutes_used: number;
   minutes_limit: number;
 }
@@ -44,7 +45,7 @@ export default function Settings() {
           .from('profiles')
           .select('*')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (error) {
           console.error('Error fetching profile:', error);
@@ -103,6 +104,7 @@ export default function Settings() {
       const { error } = await supabase
         .from('profiles')
         .update({ 
+          is_premium: true,
           subscription_type: 'premium',
           minutes_limit: 1000 // 1000 minutes for premium
         })
@@ -208,10 +210,10 @@ export default function Settings() {
             <div className="space-y-6">
               <div className="flex items-center gap-3">
                 <Badge 
-                  variant={profile.subscription_type === 'premium' ? 'default' : 'secondary'}
+                  variant={profile.is_premium ? 'default' : 'secondary'}
                   className="text-sm"
                 >
-                  {profile.subscription_type === 'premium' ? (
+                  {profile.is_premium ? (
                     <>
                       <Crown className="w-4 h-4 mr-1" />
                       Premium
@@ -220,7 +222,7 @@ export default function Settings() {
                     'Free'
                   )}
                 </Badge>
-                {profile.subscription_type === 'premium' ? (
+                {profile.is_premium ? (
                   <div className="flex items-center gap-1 text-green-600">
                     <CheckCircle className="h-4 w-4" />
                     <span className="text-sm">Alle Features verfügbar</span>
@@ -233,7 +235,7 @@ export default function Settings() {
                 )}
               </div>
 
-              {profile.subscription_type === 'free' && (
+              {!profile.is_premium && (
                 <Alert>
                   <Crown className="h-4 w-4" />
                   <AlertDescription>
@@ -242,7 +244,7 @@ export default function Settings() {
                 </Alert>
               )}
 
-              {profile.subscription_type === 'premium' && (
+              {profile.is_premium && (
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between text-sm mb-2">
@@ -280,7 +282,7 @@ export default function Settings() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {profile?.subscription_type === 'free' ? (
+            {!profile?.is_premium ? (
               <div className="space-y-4">
                 <div className="p-4 border rounded-lg bg-gradient-subtle">
                   <h3 className="font-semibold mb-2">Premium Features</h3>

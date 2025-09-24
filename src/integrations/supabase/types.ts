@@ -55,6 +55,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          is_premium: boolean
           minutes_limit: number
           minutes_used: number
           subscription_type: string
@@ -66,6 +67,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_premium?: boolean
           minutes_limit?: number
           minutes_used?: number
           subscription_type?: string
@@ -77,6 +79,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_premium?: boolean
           minutes_limit?: number
           minutes_used?: number
           subscription_type?: string

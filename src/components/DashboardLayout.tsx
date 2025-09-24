@@ -10,6 +10,7 @@ interface Profile {
   username: string;
   full_name?: string;
   subscription_type: string;
+  is_premium: boolean;
   minutes_used: number;
   minutes_limit: number;
 }
@@ -63,9 +64,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('username, full_name, subscription_type, minutes_used, minutes_limit')
+        .select('username, full_name, subscription_type, is_premium, minutes_used, minutes_limit')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
