@@ -65,6 +65,25 @@ export default function PhoneNumbers() {
     }
   };
 
+  const handleAssignAgent = async (phoneId: string, agentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('phone_numbers')
+        .update({ assigned_agent: agentId || null })
+        .eq('id', phoneId);
+
+      if (error) {
+        console.error('Error assigning agent:', error);
+        return;
+      }
+
+      // Reload phone numbers to show the change
+      loadPhoneNumbers();
+    } catch (error) {
+      console.error('Error assigning agent:', error);
+    }
+  };
+
   const handleOutboundCall = () => {
     console.log("Starting outbound call to:", outboundNumber, "with agent:", selectedAgent);
   };
@@ -116,9 +135,25 @@ export default function PhoneNumbers() {
                         Aktiv
                       </Badge>
                       <div className="text-sm text-muted-foreground mt-1">
-                        Keine Zuweisung
+                        {phone.assigned_agent || 'Keine Zuweisung'}
                       </div>
                     </div>
+                    <Select 
+                      defaultValue={phone.assigned_agent || ""} 
+                      onValueChange={(value) => handleAssignAgent(phone.id, value)}
+                    >
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Agent zuweisen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Kein Agent</SelectItem>
+                        {agents.map((agent) => (
+                          <SelectItem key={agent.id} value={agent.id}>
+                            {agent.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button variant="outline" size="sm">
                       <Settings className="h-4 w-4" />
                     </Button>

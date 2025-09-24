@@ -90,16 +90,27 @@ export default function CreateAgent() {
 
     setCreating(true);
     try {
+      // Get the current session to ensure we have a valid token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('Nicht authentifiziert. Bitte melden Sie sich erneut an.');
+      }
+
       const { data, error } = await supabase.functions.invoke('create-agent', {
-        body: formData
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (error) {
+        console.error('Function error:', error);
         throw error;
       }
 
-      if (!data.success) {
-        throw new Error(data.error || 'Unbekannter Fehler');
+      if (!data?.success) {
+        throw new Error(data?.error || 'Unbekannter Fehler');
       }
 
       toast({
