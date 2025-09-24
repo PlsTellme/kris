@@ -59,8 +59,8 @@ export function DashboardSidebar({ userProfile }: DashboardSidebarProps) {
 
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
     isActive 
-      ? "bg-primary text-primary-foreground font-medium hover:bg-primary/90" 
-      : "hover:bg-muted text-foreground";
+      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+      : "text-sidebar-foreground hover:bg-sidebar-accent";
 
   return (
     <Sidebar className="border-r border-border">
@@ -76,7 +76,7 @@ export function DashboardSidebar({ userProfile }: DashboardSidebarProps) {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-foreground font-medium">Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground font-medium">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -95,7 +95,7 @@ export function DashboardSidebar({ userProfile }: DashboardSidebarProps) {
 
         {userProfile?.is_premium && (
           <SidebarGroup>
-            <SidebarGroupLabel className="text-foreground font-medium">Premium Features</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sidebar-foreground font-medium">Premium Features</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {premiumMenuItems.map((item) => (
@@ -148,7 +148,7 @@ export function DashboardSidebar({ userProfile }: DashboardSidebarProps) {
         <Button 
           variant="ghost" 
           onClick={handleSignOut}
-          className="w-full justify-start text-foreground hover:text-foreground hover:bg-muted"
+          className="w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
         >
           <LogOut className="mr-3 h-4 w-4" />
           Abmelden
