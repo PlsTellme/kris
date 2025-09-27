@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Bot, Crown, AlertTriangle } from "lucide-react";
+import { Bot, Crown, AlertTriangle, FileText, Building, Home } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -19,7 +19,8 @@ export default function CreateAgent() {
     name: '',
     voice_id: '',
     first_message: '',
-    prompt: ''
+    prompt: '',
+    email: ''
   });
   const [creating, setCreating] = useState(false);
   
@@ -172,6 +173,63 @@ export default function CreateAgent() {
     );
   }
 
+  const promptTemplates = {
+    makler: `Du bist ein professioneller Immobilienmakler mit langjähriger Erfahrung. 
+
+**Deine Aufgaben:**
+- Interessenten zu Immobilien beraten und qualifizieren
+- Besichtigungstermine koordinieren
+- Finanzierungsoptionen erklären
+- Kundenanfragen professionell bearbeiten
+
+**Dein Verhalten:**
+- Freundlich, kompetent und vertrauenswürdig
+- Stelle gezielte Fragen zu Budget, Wohnwünschen und Zeitrahmen
+- Erkläre Immobilienprozesse verständlich
+- Sammle Kontaktdaten für Follow-up
+
+Bei wichtigen Anfragen: Sende Zusammenfassung an {{email}}`,
+
+    hausverwalter: `Du bist ein erfahrener Hausverwalter für Wohn- und Gewerbeimmobilien.
+
+**Deine Aufgaben:**
+- Mieteranfragen und Beschwerden bearbeiten
+- Reparatur- und Wartungsangelegenheiten koordinieren
+- Mietvertragsfragen beantworten
+- Notfälle priorisieren und weiterleiten
+
+**Dein Verhalten:**
+- Professionell, lösungsorientiert und geduldig
+- Dokumentiere alle Anfragen gewissenhaft
+- Unterscheide zwischen Routine- und Notfällen
+- Informiere über Hausordnung und Mieterpflichten
+
+Wichtige Vorfälle werden an {{email}} gemeldet.`,
+
+    immobilienhotline: `Du bist die erste Anlaufstelle der Immobilien-Hotline.
+
+**Deine Aufgaben:**
+- Eingehende Anrufe professionell entgegennehmen
+- Interessenten zu passenden Abteilungen weiterleiten
+- Grundlegende Immobilieninformationen bereitstellen
+- Terminvereinbarungen koordinieren
+
+**Dein Verhalten:**
+- Herzlich, hilfsbereit und serviceorientiert
+- Stelle fest: Verkauf, Vermietung, oder Verwaltung?
+- Sammle Kontaktdaten und Präferenzen
+- Erkläre nächste Schritte klar
+
+Alle Anfragen werden zur Nachverfolgung an {{email}} weitergeleitet.`
+  };
+
+  const handleTemplateSelect = (template: keyof typeof promptTemplates) => {
+    setFormData(prev => ({
+      ...prev,
+      prompt: promptTemplates[template]
+    }));
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -179,7 +237,9 @@ export default function CreateAgent() {
         <p className="text-muted-foreground">Erstellen Sie Ihren personalisierten KI-Telefonagenten</p>
       </div>
 
-      <Card className="shadow-card max-w-2xl">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-primary" />
@@ -231,6 +291,20 @@ export default function CreateAgent() {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="email">E-Mail für Transkripte (optional)</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="mail@example.com"
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Transkripte und Zusammenfassungen werden an diese Adresse gesendet
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="agent-prompt">Agent Prompt *</Label>
             <Textarea
               id="agent-prompt"
@@ -240,21 +314,13 @@ export default function CreateAgent() {
               onChange={(e) => handleInputChange('prompt', e.target.value)}
             />
             <p className="text-sm text-muted-foreground">
-              Definieren Sie hier das Verhalten und die Persönlichkeit Ihres Agenten
+              Definieren Sie hier das Verhalten und die Persönlichkeit Ihres Agenten. Nutzen Sie {'{{email}}'} als Platzhalter.
             </p>
           </div>
 
-          <div className="flex gap-4 pt-4">
+          <div className="pt-4">
             <Button 
-              variant="outline" 
-              className="flex-1"
-              disabled={creating}
-            >
-              <Bot className="mr-2 h-4 w-4" />
-              Vorschau testen
-            </Button>
-            <Button 
-              className="flex-1"
+              className="w-full"
               onClick={handleCreateAgent}
               disabled={creating}
             >
@@ -262,7 +328,73 @@ export default function CreateAgent() {
             </Button>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Prompt-Vorlagen
+              </CardTitle>
+              <CardDescription>
+                Wählen Sie eine vorgefertigte Vorlage als Startpunkt
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleTemplateSelect('makler')}
+              >
+                <Building className="mr-2 h-4 w-4" />
+                Immobilienmakler
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleTemplateSelect('hausverwalter')}
+              >
+                <Home className="mr-2 h-4 w-4" />
+                Hausverwalter
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleTemplateSelect('immobilienhotline')}
+              >
+                <Bot className="mr-2 h-4 w-4" />
+                Immobilienhotline
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle>Prompting-Guide</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-4">
+              <div>
+                <h4 className="font-medium mb-2">Struktur-Tipps:</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• Klare Rollendefinition</li>
+                  <li>• Spezifische Aufgaben auflisten</li>
+                  <li>• Gewünschtes Verhalten beschreiben</li>
+                  <li>• Beispiele für Antworten geben</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Variablen:</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• <code>{'{{email}}'}</code> - Ziel-E-Mail</li>
+                  <li>• Weitere folgen...</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

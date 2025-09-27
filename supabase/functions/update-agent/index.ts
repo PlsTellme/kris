@@ -14,13 +14,16 @@ serve(async (req) => {
   }
 
   try {
-    const { agent_id, name, voice_id, first_message, prompt, elevenlabs_agent_id, user_id } = await req.json();
+    const { agent_id, name, voice_id, first_message, prompt, elevenlabs_agent_id, user_id, email } = await req.json();
 
     if (!agent_id || !name || !voice_id || !prompt || !elevenlabs_agent_id || !user_id) {
       throw new Error('Missing required fields');
     }
 
-    console.log('Updating agent with data:', { agent_id, name, voice_id, first_message, prompt, elevenlabs_agent_id, user_id });
+    console.log('Updating agent with data:', { agent_id, name, voice_id, first_message, prompt, elevenlabs_agent_id, user_id, email });
+
+    // Replace {{email}} placeholder in prompt
+    const processedPrompt = prompt.replace(/\{\{email\}\}/g, email || 'false');
 
     // Update agent in 11labs
     const elevenlabsResponse = await fetch(`https://api.elevenlabs.io/v1/convai/agents/${elevenlabs_agent_id}`, {
@@ -36,7 +39,7 @@ serve(async (req) => {
             language: "de",
             first_message: first_message || "Hallo, wie kann ich Ihnen helfen?",
             prompt: {
-              prompt: prompt,
+              prompt: processedPrompt,
               llm: "gpt-4.1"
             }
           },
@@ -70,7 +73,8 @@ serve(async (req) => {
         name: name,
         voice_type: voice_id,
         first_message: first_message,
-        prompt: prompt
+        prompt: prompt,
+        email: email
       })
       .eq('id', agent_id)
       .eq('user_id', user_id)

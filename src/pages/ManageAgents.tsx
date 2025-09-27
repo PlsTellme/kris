@@ -23,7 +23,8 @@ export default function ManageAgents() {
     name: '',
     voice_id: '',
     first_message: '',
-    prompt: ''
+    prompt: '',
+    email: ''
   });
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -88,7 +89,8 @@ export default function ManageAgents() {
       name: agent.name,
       voice_id: agent.voice_type,
       first_message: agent.first_message || '',
-      prompt: agent.prompt || ''
+      prompt: agent.prompt || '',
+      email: agent.email || ''
     });
   };
 
@@ -323,6 +325,16 @@ export default function ManageAgents() {
                               />
                             </div>
                             <div>
+                              <Label htmlFor="edit-email">E-Mail für Transkripte (optional)</Label>
+                              <Input
+                                id="edit-email"
+                                type="email"
+                                value={editFormData.email}
+                                onChange={(e) => setEditFormData(prev => ({...prev, email: e.target.value}))}
+                                placeholder="mail@example.com"
+                              />
+                            </div>
+                            <div>
                               <Label htmlFor="edit-prompt">Agent Prompt *</Label>
                               <Textarea
                                 id="edit-prompt"
@@ -330,6 +342,9 @@ export default function ManageAgents() {
                                 onChange={(e) => setEditFormData(prev => ({...prev, prompt: e.target.value}))}
                                 className="min-h-[150px]"
                               />
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Nutzen Sie {'{{email}}'} als Platzhalter für die E-Mail-Adresse
+                              </p>
                             </div>
                             <div className="flex gap-3 pt-4">
                               <Button 

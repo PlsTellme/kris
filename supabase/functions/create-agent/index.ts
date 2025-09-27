@@ -14,13 +14,16 @@ serve(async (req) => {
   }
 
   try {
-    const { name, voice_id, first_message, prompt, user_id } = await req.json();
+    const { name, voice_id, first_message, prompt, user_id, email } = await req.json();
 
     if (!name || !voice_id || !prompt || !user_id) {
       throw new Error('Missing required fields: name, voice_id, prompt, user_id');
     }
 
-    console.log('Creating agent with data:', { name, voice_id, first_message, prompt, user_id });
+    console.log('Creating agent with data:', { name, voice_id, first_message, prompt, user_id, email });
+
+    // Replace {{email}} placeholder in prompt
+    const processedPrompt = prompt.replace(/\{\{email\}\}/g, email || 'false');
 
     // Create agent in 11labs
     const elevenlabsResponse = await fetch('https://api.elevenlabs.io/v1/convai/agents/create', {
@@ -36,7 +39,7 @@ serve(async (req) => {
             language: "de",
             first_message: first_message || "Hallo, wie kann ich Ihnen helfen?",
             prompt: {
-              prompt: prompt,
+              prompt: processedPrompt,
               llm: "gpt-4.1"
             }
           },
@@ -46,13 +49,28 @@ serve(async (req) => {
             stability: 0.7,
             similarity_boost: 0.7,
             speed: 0.96
+          },
+          asr: {
+            quality: "high",
+            user_input_audio_format: "ulaw_8000"
+          },
+          audio: {
+            output_format: "ulaw_8000"
           }
         },
         platform_settings: {
           data_collection: {
             Transkript: {
               type: "string",
-              description: "Extrahiere das Transkript des Anrufes in folgendem Format: KI: \"\", Anrufer: \"\""
+              description: "Extrahiere das Transkript des Anrufes in folgendem Format: KI: \"\", Anrufer: \"\"."
+            },
+            Zusammenfassung: {
+              type: "string",
+              description: "Erstelle eine prägnante 2-3 Zeilen Zusammenfassung des Kundenanliegens und der wichtigsten Gesprächsinhalte."
+            },
+            Erfolgreich: {
+              type: "boolean",
+              description: "Bewerte ob der Call erfolgreich war (true/false). Erfolgreich bedeutet: Kundenanliegen wurde verstanden und angemessen bearbeitet, Kunde wirkte zufrieden."
             }
           }
         },
@@ -88,6 +106,7 @@ serve(async (req) => {
         voice_type: voice_id,
         first_message: first_message,
         prompt: prompt,
+        email: email,
         elevenlabs_agent_id: elevenlabsData.agent_id
       })
       .select()
