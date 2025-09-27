@@ -4,11 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { 
   Phone, 
   Clock, 
@@ -18,7 +18,8 @@ import {
   ChevronDown,
   ChevronRight,
   FileText,
-  X
+  X,
+  TrendingUp
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -151,8 +152,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Übersicht über alle Ihre Telefonagenten-Aktivitäten</p>
+        <h1 className="text-3xl font-bold">Anruf-Übersicht</h1>
+        <p className="text-muted-foreground">Detaillierte Übersicht aller Anrufe ({totalCalls} von {totalCalls})</p>
       </div>
 
       {/* Statistics Cards */}
@@ -166,21 +167,58 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-muted/50 border-muted">
+        <Card className="bg-green-50 border-green-200">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Gesamtdauer</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Erfolgreiche Anrufe</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-2xl font-bold">{formatDuration(totalDuration)}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {filteredCallLogs.filter(log => log.Erfolgreich === true).length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {totalCalls > 0 ? Math.round((filteredCallLogs.filter(log => log.Erfolgreich === true).length / totalCalls) * 100) : 0}% Erfolgsquote
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-muted/50 border-muted">
+        {/* Success Rate Chart */}
+        <Card className="bg-gradient-to-r from-green-50 to-red-50 border-muted">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Ø Dauer</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Erfolgsübersicht
+            </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-2xl font-bold">{formatDuration(avgDuration)}</div>
+            <div className="h-24">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { 
+                        name: 'Erfolgreich', 
+                        value: filteredCallLogs.filter(log => log.Erfolgreich === true).length,
+                        color: '#22c55e'
+                      },
+                      { 
+                        name: 'Nicht erfolgreich', 
+                        value: filteredCallLogs.filter(log => log.Erfolgreich === false || log.Erfolgreich === null).length,
+                        color: '#ef4444'
+                      }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={20}
+                    outerRadius={40}
+                    dataKey="value"
+                  >
+                    <Cell fill="#22c55e" />
+                    <Cell fill="#ef4444" />
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -355,74 +393,99 @@ export default function Dashboard() {
               {filteredCallLogs.map((log) => (
                 <Card key={log.id} className="bg-background border-muted/50 shadow-sm">
                   <CardContent className="p-3">
-                    {/* Main Call Info Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
-                      {/* Agent */}
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Agent</p>
-                        <p className="font-semibold">{getAgentName(log.elevenlabs_agent_id)}</p>
-                      </div>
-                      
-                      {/* Date/Time */}
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Zeitpunkt</p>
-                        <p className="font-semibold">{formatUnixTimestamp(log.call_timestamp_unix)}</p>
-                      </div>
-                      
-                      {/* Duration */}
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Dauer</p>
-                        <p className="font-semibold">{formatDuration(log.duration)}</p>
-                      </div>
-                      
-                      {/* Caller */}
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Anrufer</p>
-                        <p className="font-semibold">{log.caller_number}</p>
-                      </div>
-                    </div>
-                    
-                    {/* Transcript Section */}
-                    <div className="border-t border-muted/50 pt-3">
-                      {log.transcript ? (
-                        <div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleTranscript(log.id)}
-                            className="flex items-center gap-2 p-0 hover:bg-transparent"
-                          >
-                            <FileText className="h-4 w-4" />
-                            <span className="font-medium">Transkript</span>
-                            {expandedTranscripts.has(log.id) ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </Button>
-                          
-                          {expandedTranscripts.has(log.id) && (
-                            <div className="mt-3 p-3 bg-muted/30 rounded-md border border-muted">
-                              <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                                {log.transcript}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <FileText className="h-4 w-4" />
-                          <span className="text-sm">Kein Transkript verfügbar</span>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+                     {/* Main Call Info Grid */}
+                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-3">
+                       {/* Agent */}
+                       <div>
+                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Agent</p>
+                         <p className="font-semibold">{getAgentName(log.elevenlabs_agent_id)}</p>
+                       </div>
+                       
+                       {/* Date/Time */}
+                       <div>
+                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Zeitpunkt</p>
+                         <p className="font-semibold text-sm">{formatUnixTimestamp(log.call_timestamp_unix)}</p>
+                       </div>
+                       
+                       {/* Caller */}
+                       <div>
+                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Anrufer</p>
+                         <p className="font-semibold">{log.caller_number}</p>
+                       </div>
+
+                       {/* Success Status */}
+                       <div>
+                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Erfolgreich</p>
+                         <div className="flex items-center gap-2">
+                           <div className={`w-2 h-2 rounded-full ${log.Erfolgreich ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                           <span className={`text-sm font-medium ${log.Erfolgreich ? 'text-green-600' : 'text-red-600'}`}>
+                             {log.Erfolgreich ? 'Ja' : 'Nein'}
+                           </span>
+                         </div>
+                       </div>
+
+                       {/* Expand Button */}
+                       <div className="flex justify-end">
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => toggleTranscript(log.id)}
+                           className="flex items-center gap-2"
+                         >
+                           <span className="font-medium">Details</span>
+                           {expandedTranscripts.has(log.id) ? (
+                             <ChevronDown className="h-4 w-4" />
+                           ) : (
+                             <ChevronRight className="h-4 w-4" />
+                           )}
+                         </Button>
+                       </div>
+                     </div>
+                     
+                     {/* Expandable Details Section */}
+                     {expandedTranscripts.has(log.id) && (
+                       <div className="border-t border-muted/50 pt-4 space-y-4">
+                         {/* Summary */}
+                         {log.Zusammenfassung && (
+                           <div>
+                             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Zusammenfassung</p>
+                             <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+                               <p className="text-sm leading-relaxed">{log.Zusammenfassung}</p>
+                             </div>
+                           </div>
+                         )}
+
+                         {/* Transcript */}
+                         {log.transcript && (
+                           <div>
+                             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Transkript</p>
+                             <div className="p-3 bg-muted/30 rounded-md border border-muted">
+                               <p className="text-sm leading-relaxed whitespace-pre-wrap">{log.transcript}</p>
+                             </div>
+                           </div>
+                         )}
+
+                         {/* Usage */}
+                         {log.Verbrauch && (
+                           <div>
+                             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Verbrauch</p>
+                             <div className="p-3 bg-orange-50 rounded-md border border-orange-200">
+                               <p className="text-sm">
+                                 <span className="font-semibold">{Math.ceil(log.Verbrauch / 60)}</span> Minuten 
+                                 <span className="text-muted-foreground ml-2">({log.Verbrauch} Sekunden)</span>
+                               </p>
+                             </div>
+                           </div>
+                         )}
+                       </div>
+                     )}
+                   </CardContent>
+                 </Card>
+               ))}
+             </div>
+           )}
+         </CardContent>
+       </Card>
+     </div>
+   );
+ }
