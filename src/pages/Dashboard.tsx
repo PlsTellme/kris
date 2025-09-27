@@ -465,18 +465,17 @@ export default function Dashboard() {
                            </div>
                          )}
 
-                         {/* Usage */}
-                         {log.Verbrauch && (
-                           <div>
-                             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Verbrauch</p>
-                             <div className="p-3 bg-orange-50 rounded-md border border-orange-200">
-                               <p className="text-sm">
-                                 <span className="font-semibold">{Math.ceil(log.Verbrauch / 60)}</span> Minuten 
-                                 <span className="text-muted-foreground ml-2">({log.Verbrauch} Sekunden)</span>
-                               </p>
-                             </div>
-                           </div>
-                         )}
+                          {/* Usage */}
+                          {log.Verbrauch && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Verbrauch</p>
+                              <div className="p-3 bg-muted/30 rounded-md border border-muted">
+                                <p className="text-sm">
+                                  <span className="font-semibold">{Math.ceil(log.Verbrauch / 60)}</span> Minuten
+                                </p>
+                              </div>
+                            </div>
+                          )}
                        </div>
                      )}
                    </CardContent>

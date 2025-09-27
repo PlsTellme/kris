@@ -53,6 +53,26 @@ serve(async (req) => {
             similarity_boost: 0.7,
             speed: 0.96
           }
+        },
+        platform_settings: {
+          data_collection: {
+            Transkript: {
+              type: "string",
+              description: "Extrahiere das Transkript des Anrufes in folgendem Format: KI: \"\", Anrufer: \"\"."
+            },
+            Zusammenfassung: {
+              type: "string",
+              description: "Erstelle eine prägnante 2-3 Zeilen Zusammenfassung des Kundenanliegens und der wichtigsten Gesprächsinhalte."
+            },
+            Erfolgreich: {
+              type: "boolean",
+              description: "Bewerte ob der Call erfolgreich war (true/false). Erfolgreich bedeutet: Kundenanliegen wurde verstanden und angemessen bearbeitet, Kunde wirkte zufrieden."
+            },
+            Email: {
+              type: "string",
+              description: "Erfasse die Email für die Weiterleitung. Du findest sie hier: (email). Gib NUR die EMail aus."
+            }
+          }
         }
       }),
     });
