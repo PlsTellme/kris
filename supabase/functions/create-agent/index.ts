@@ -25,6 +25,9 @@ serve(async (req) => {
     // Replace {{email}} placeholder in prompt
     const processedPrompt = prompt.replace(/\{\{email\}\}/g, email || 'false');
 
+    // Append email information to prompt automatically (hidden from user)
+    const finalPrompt = processedPrompt + (email ? `\n\nEmail-Adresse für Transkripte: ${email}` : '');
+
     // Create agent in 11labs
     const elevenlabsResponse = await fetch('https://api.elevenlabs.io/v1/convai/agents/create', {
       method: 'POST',
@@ -39,7 +42,7 @@ serve(async (req) => {
             language: "de",
             first_message: first_message || "Hallo, wie kann ich Ihnen helfen?",
             prompt: {
-              prompt: processedPrompt,
+              prompt: finalPrompt,
               llm: "gpt-4.1"
             }
           },

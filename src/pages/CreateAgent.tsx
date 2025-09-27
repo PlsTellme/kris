@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Bot, Crown, AlertTriangle, FileText, Building, Home } from "lucide-react";
+import { Bot, Crown, AlertTriangle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +15,7 @@ export default function CreateAgent() {
   const [subscriptionType, setSubscriptionType] = useState<string>('free');
   const [loading, setLoading] = useState(true);
   const [voices, setVoices] = useState<Array<{id: string, name: string, voice_id: string, gender: string}>>([]);
+  const [templates, setTemplates] = useState<Array<{id: string, name: string, title: string, content: string}>>([]);
   const [formData, setFormData] = useState({
     name: '',
     voice_id: '',
@@ -30,6 +31,7 @@ export default function CreateAgent() {
   useEffect(() => {
     checkSubscription();
     loadVoices();
+    loadTemplates();
   }, []);
 
   const checkSubscription = async () => {
@@ -69,6 +71,24 @@ export default function CreateAgent() {
       setVoices(voicesData || []);
     } catch (error) {
       console.error('Error loading voices:', error);
+    }
+  };
+
+  const loadTemplates = async () => {
+    try {
+      const { data: templatesData, error } = await supabase
+        .from('prompt_templates')
+        .select('*')
+        .order('title');
+
+      if (error) {
+        console.error('Error loading templates:', error);
+        return;
+      }
+
+      setTemplates(templatesData || []);
+    } catch (error) {
+      console.error('Error loading templates:', error);
     }
   };
 
@@ -173,61 +193,14 @@ export default function CreateAgent() {
     );
   }
 
-  const promptTemplates = {
-    makler: `Du bist ein professioneller Immobilienmakler mit langjähriger Erfahrung. 
-
-**Deine Aufgaben:**
-- Interessenten zu Immobilien beraten und qualifizieren
-- Besichtigungstermine koordinieren
-- Finanzierungsoptionen erklären
-- Kundenanfragen professionell bearbeiten
-
-**Dein Verhalten:**
-- Freundlich, kompetent und vertrauenswürdig
-- Stelle gezielte Fragen zu Budget, Wohnwünschen und Zeitrahmen
-- Erkläre Immobilienprozesse verständlich
-- Sammle Kontaktdaten für Follow-up
-
-Bei wichtigen Anfragen: Sende Zusammenfassung an ${'{{email}}'}`,
-
-    hausverwalter: `Du bist ein erfahrener Hausverwalter für Wohn- und Gewerbeimmobilien.
-
-**Deine Aufgaben:**
-- Mieteranfragen und Beschwerden bearbeiten
-- Reparatur- und Wartungsangelegenheiten koordinieren
-- Mietvertragsfragen beantworten
-- Notfälle priorisieren und weiterleiten
-
-**Dein Verhalten:**
-- Professionell, lösungsorientiert und geduldig
-- Dokumentiere alle Anfragen gewissenhaft
-- Unterscheide zwischen Routine- und Notfällen
-- Informiere über Hausordnung und Mieterpflichten
-
-Wichtige Vorfälle werden an ${'{{email}}'} gemeldet.`,
-
-    immobilienhotline: `Du bist die erste Anlaufstelle der Immobilien-Hotline.
-
-**Deine Aufgaben:**
-- Eingehende Anrufe professionell entgegennehmen
-- Interessenten zu passenden Abteilungen weiterleiten
-- Grundlegende Immobilieninformationen bereitstellen
-- Terminvereinbarungen koordinieren
-
-**Dein Verhalten:**
-- Herzlich, hilfsbereit und serviceorientiert
-- Stelle fest: Verkauf, Vermietung, oder Verwaltung?
-- Sammle Kontaktdaten und Präferenzen
-- Erkläre nächste Schritte klar
-
-Alle Anfragen werden zur Nachverfolgung an ${'{{email}}'} weitergeleitet.`
-  };
-
-  const handleTemplateSelect = (template: keyof typeof promptTemplates) => {
-    setFormData(prev => ({
-      ...prev,
-      prompt: promptTemplates[template]
-    }));
+  const handleTemplateSelect = (templateId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    if (template) {
+      setFormData(prev => ({
+        ...prev,
+        prompt: template.content
+      }));
+    }
   };
 
   return (
@@ -314,7 +287,7 @@ Alle Anfragen werden zur Nachverfolgung an ${'{{email}}'} weitergeleitet.`
               onChange={(e) => handleInputChange('prompt', e.target.value)}
             />
             <p className="text-sm text-muted-foreground">
-              Definieren Sie hier das Verhalten und die Persönlichkeit Ihres Agenten. Nutzen Sie {'{{email}}'} als Platzhalter.
+              Definieren Sie hier das Verhalten und die Persönlichkeit Ihres Agenten.
             </p>
           </div>
 
@@ -343,30 +316,17 @@ Alle Anfragen werden zur Nachverfolgung an ${'{{email}}'} weitergeleitet.`
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => handleTemplateSelect('makler')}
-              >
-                <Building className="mr-2 h-4 w-4" />
-                Immobilienmakler
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => handleTemplateSelect('hausverwalter')}
-              >
-                <Home className="mr-2 h-4 w-4" />
-                Hausverwalter
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => handleTemplateSelect('immobilienhotline')}
-              >
-                <Bot className="mr-2 h-4 w-4" />
-                Immobilienhotline
-              </Button>
+              {templates.map((template) => (
+                <Button
+                  key={template.id}
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => handleTemplateSelect(template.id)}
+                >
+                  <Bot className="mr-2 h-4 w-4" />
+                  {template.title}
+                </Button>
+              ))}
             </CardContent>
           </Card>
 
@@ -387,7 +347,7 @@ Alle Anfragen werden zur Nachverfolgung an ${'{{email}}'} weitergeleitet.`
               <div>
                 <h4 className="font-medium mb-2">Variablen:</h4>
                 <ul className="space-y-1 text-muted-foreground">
-                  <li>• <code>{'{{email}}'}</code> - Ziel-E-Mail</li>
+                  <li>• E-Mail wird automatisch hinzugefügt</li>
                   <li>• Weitere folgen...</li>
                 </ul>
               </div>

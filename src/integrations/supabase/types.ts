@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string
           elevenlabs_agent_id: string | null
+          email: string | null
           first_message: string | null
           id: string
           name: string
@@ -30,6 +31,7 @@ export type Database = {
         Insert: {
           created_at?: string
           elevenlabs_agent_id?: string | null
+          email?: string | null
           first_message?: string | null
           id?: string
           name: string
@@ -42,6 +44,7 @@ export type Database = {
         Update: {
           created_at?: string
           elevenlabs_agent_id?: string | null
+          email?: string | null
           first_message?: string | null
           id?: string
           name?: string
@@ -160,6 +163,33 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string
+        }
+        Relationships: []
+      }
+      prompt_templates: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          name: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          name: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          name?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }

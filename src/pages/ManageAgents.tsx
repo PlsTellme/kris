@@ -342,9 +342,9 @@ export default function ManageAgents() {
                                 onChange={(e) => setEditFormData(prev => ({...prev, prompt: e.target.value}))}
                                 className="min-h-[150px]"
                               />
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Nutzen Sie {'{{email}}'} als Platzhalter für die E-Mail-Adresse
-                              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Definieren Sie hier das Verhalten und die Persönlichkeit Ihres Agenten.
+              </p>
                             </div>
                             <div className="flex gap-3 pt-4">
                               <Button 
