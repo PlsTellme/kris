@@ -74,10 +74,6 @@ serve(async (req) => {
             Erfolgreich: {
               type: "boolean",
               description: "Bewerte ob der Call erfolgreich war (true/false). Erfolgreich bedeutet: Kundenanliegen wurde verstanden und angemessen bearbeitet, Kunde wirkte zufrieden."
-            },
-            Email: {
-              type: "string",
-              description: "Erfasse die Email für die Weiterleitung. Du findest sie hier: (email). Gib NUR die EMail aus."
             }
           }
         },
