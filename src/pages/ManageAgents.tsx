@@ -380,8 +380,7 @@ export default function ManageAgents() {
                           <AlertDialogTitle>Agent löschen</AlertDialogTitle>
                           <AlertDialogDescription>
                             Sind Sie sicher, dass Sie den Agent "{agent.name}" löschen möchten? 
-                            Diese Aktion kann nicht rückgängig gemacht werden. Der Agent wird sowohl 
-                            aus ElevenLabs als auch aus Ihrer Datenbank entfernt.
+                            Diese Aktion kann nicht rückgängig gemacht werden.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

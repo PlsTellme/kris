@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.delete-agent]
 verify_jwt = false
+
+[functions.get-secret]
+verify_jwt = false

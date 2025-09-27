@@ -157,16 +157,16 @@ export default function Dashboard() {
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-0 shadow-sm">
+        <Card className="bg-primary/5 border-primary/20">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">Gesamt Anrufe</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-2xl font-bold">{totalCalls}</div>
+            <div className="text-2xl font-bold text-primary">{totalCalls}</div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm">
+        <Card className="bg-muted/50 border-muted">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">Gesamtdauer</CardTitle>
           </CardHeader>
@@ -175,7 +175,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm">
+        <Card className="bg-muted/50 border-muted">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">Ø Dauer</CardTitle>
           </CardHeader>
@@ -186,7 +186,7 @@ export default function Dashboard() {
       </div>
 
       {/* Enhanced Filters */}
-      <Card className="border-0 shadow-sm">
+      <Card className="bg-muted/30 border-muted">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold">Filter & Suche</CardTitle>
@@ -317,7 +317,7 @@ export default function Dashboard() {
       </Card>
 
       {/* Enhanced Call Logs */}
-      <Card className="border-0 shadow-sm">
+      <Card className="bg-muted/30 border-muted">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold">Anruf-Logs</CardTitle>
@@ -351,12 +351,12 @@ export default function Dashboard() {
               )}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {filteredCallLogs.map((log) => (
-                <Card key={log.id} className="border border-muted">
-                  <CardContent className="p-4">
+                <Card key={log.id} className="bg-background border-muted/50 shadow-sm">
+                  <CardContent className="p-3">
                     {/* Main Call Info Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
                       {/* Agent */}
                       <div>
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Agent</p>
@@ -383,7 +383,7 @@ export default function Dashboard() {
                     </div>
                     
                     {/* Transcript Section */}
-                    <div className="border-t border-muted pt-4">
+                    <div className="border-t border-muted/50 pt-3">
                       {log.transcript ? (
                         <div>
                           <Button
