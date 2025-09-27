@@ -188,7 +188,7 @@ export default function CreateAgent() {
 - Erkläre Immobilienprozesse verständlich
 - Sammle Kontaktdaten für Follow-up
 
-Bei wichtigen Anfragen: Sende Zusammenfassung an {{email}}`,
+Bei wichtigen Anfragen: Sende Zusammenfassung an ${'{{email}}'}`,
 
     hausverwalter: `Du bist ein erfahrener Hausverwalter für Wohn- und Gewerbeimmobilien.
 
@@ -204,7 +204,7 @@ Bei wichtigen Anfragen: Sende Zusammenfassung an {{email}}`,
 - Unterscheide zwischen Routine- und Notfällen
 - Informiere über Hausordnung und Mieterpflichten
 
-Wichtige Vorfälle werden an {{email}} gemeldet.`,
+Wichtige Vorfälle werden an ${'{{email}}'} gemeldet.`,
 
     immobilienhotline: `Du bist die erste Anlaufstelle der Immobilien-Hotline.
 
@@ -220,7 +220,7 @@ Wichtige Vorfälle werden an {{email}} gemeldet.`,
 - Sammle Kontaktdaten und Präferenzen
 - Erkläre nächste Schritte klar
 
-Alle Anfragen werden zur Nachverfolgung an {{email}} weitergeleitet.`
+Alle Anfragen werden zur Nachverfolgung an ${'{{email}}'} weitergeleitet.`
   };
 
   const handleTemplateSelect = (template: keyof typeof promptTemplates) => {
