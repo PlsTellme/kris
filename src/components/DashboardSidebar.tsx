@@ -40,6 +40,8 @@ interface DashboardSidebarProps {
     username: string;
     subscription_type: string;
     is_premium: boolean;
+    minutes_used?: number;
+    minutes_limit?: number;
   };
 }
 
@@ -142,7 +144,7 @@ export function DashboardSidebar({ userProfile }: DashboardSidebarProps) {
                 {userProfile?.username}
               </div>
               <div className="text-xs text-sidebar-foreground/70">
-                {userProfile?.is_premium ? 'Premium' : 'Free'}
+                {userProfile?.is_premium ? 'Premium' : 'Free'} • {userProfile?.minutes_used || 0}/{userProfile?.minutes_limit || 0} Min
               </div>
             </div>
           </div>

@@ -150,49 +150,6 @@ export default function Settings() {
         <p className="text-muted-foreground">Verwalten Sie Ihr Konto und Ihre Einstellungen</p>
       </div>
 
-      {/* Account Information */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Konto Informationen
-          </CardTitle>
-          <CardDescription>
-            Verwalten Sie Ihre persönlichen Daten
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {profile && (
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              await handleUpdateProfile(formData);
-            }} className="space-y-4 max-w-md">
-              <div className="space-y-2">
-                <Label htmlFor="username">Benutzername</Label>
-                <Input
-                  id="username"
-                  name="username"
-                  defaultValue={profile.username}
-                  disabled={updating}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="full_name">Vollständiger Name</Label>
-                <Input
-                  id="full_name"
-                  name="full_name"
-                  defaultValue={profile.full_name || ""}
-                  disabled={updating}
-                />
-              </div>
-              <Button type="submit" disabled={updating}>
-                {updating ? "Wird gespeichert..." : "Änderungen speichern"}
-              </Button>
-            </form>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Subscription Status */}
       <Card className="shadow-card">
@@ -310,7 +267,7 @@ export default function Settings() {
                 </div>
                 <Button variant="outline" size="lg" className="w-full">
                   <Clock className="mr-2 h-4 w-4" />
-                  Zusätzliche Minuten kaufen - €0.05/Min
+                  Zusätzliche Minuten kaufen - €0.20/Min
                 </Button>
               </div>
             )}

@@ -11,8 +11,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { 
   Phone, 
-  CheckCircle, 
-  TrendingUp, 
   Clock, 
   Filter, 
   Search,
@@ -20,7 +18,6 @@ import {
   ChevronDown,
   ChevronRight,
   FileText,
-  User,
   X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -160,57 +157,42 @@ export default function Dashboard() {
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gesamt Anrufe</CardTitle>
-            <Phone className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Gesamt Anrufe</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="text-2xl font-bold">{totalCalls}</div>
-            <p className="text-xs text-muted-foreground">
-              Alle aufgezeichneten Anrufe
-            </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gesamtdauer</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Gesamtdauer</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="text-2xl font-bold">{formatDuration(totalDuration)}</div>
-            <p className="text-xs text-muted-foreground">
-              Minuten:Sekunden
-            </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ø Dauer</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Ø Dauer</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="text-2xl font-bold">{formatDuration(avgDuration)}</div>
-            <p className="text-xs text-muted-foreground">
-              Durchschnittliche Anrufdauer
-            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Enhanced Filters */}
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filter & Suche
-            </CardTitle>
-            <Button variant="outline" size="sm" onClick={clearFilters}>
+            <CardTitle className="text-lg font-semibold">Filter & Suche</CardTitle>
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
               <X className="h-4 w-4 mr-2" />
-              Filter zurücksetzen
+              Zurücksetzen
             </Button>
           </div>
         </CardHeader>
@@ -242,7 +224,7 @@ export default function Dashboard() {
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
+                      "w-full justify-start text-left font-normal border-muted",
                       !dateFrom && "text-muted-foreground"
                     )}
                   >
@@ -270,7 +252,7 @@ export default function Dashboard() {
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
+                      "w-full justify-start text-left font-normal border-muted",
                       !dateTo && "text-muted-foreground"
                     )}
                   >
@@ -335,18 +317,14 @@ export default function Dashboard() {
       </Card>
 
       {/* Enhanced Call Logs */}
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Phone className="h-5 w-5" />
-            Anruf-Logs
-            <Badge variant="outline" className="ml-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold">Anruf-Logs</CardTitle>
+            <Badge variant="outline" className="text-muted-foreground">
               {filteredCallLogs.length} {filteredCallLogs.length === 1 ? 'Anruf' : 'Anrufe'}
             </Badge>
-          </CardTitle>
-          <CardDescription>
-            Alle Anrufe Ihrer Agenten im Detail
-          </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -373,69 +351,49 @@ export default function Dashboard() {
               )}
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {filteredCallLogs.map((log) => (
-                <Card key={log.id} className="border-l-4 border-l-primary/30 shadow-sm hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                <Card key={log.id} className="border border-muted">
+                  <CardContent className="p-4">
                     {/* Main Call Info Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-4">
                       {/* Agent */}
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-lg">
-                          <User className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Agent</p>
-                          <p className="font-medium text-lg">{getAgentName(log.elevenlabs_agent_id)}</p>
-                        </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Agent</p>
+                        <p className="font-semibold">{getAgentName(log.elevenlabs_agent_id)}</p>
                       </div>
                       
                       {/* Date/Time */}
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-50 rounded-lg">
-                          <CalendarIcon className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Anrufdatum</p>
-                          <p className="font-medium text-lg">{formatUnixTimestamp(log.call_timestamp_unix)}</p>
-                        </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Zeitpunkt</p>
+                        <p className="font-semibold">{formatUnixTimestamp(log.call_timestamp_unix)}</p>
                       </div>
                       
                       {/* Duration */}
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-50 rounded-lg">
-                          <Clock className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Dauer</p>
-                          <p className="font-medium text-lg">{formatDuration(log.duration)}</p>
-                        </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Dauer</p>
+                        <p className="font-semibold">{formatDuration(log.duration)}</p>
                       </div>
                       
                       {/* Caller */}
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-orange-50 rounded-lg">
-                          <Phone className="h-5 w-5 text-orange-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Anrufer</p>
-                          <p className="font-medium text-lg">{log.caller_number}</p>
-                        </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Anrufer</p>
+                        <p className="font-semibold">{log.caller_number}</p>
                       </div>
                     </div>
                     
                     {/* Transcript Section */}
-                    <div className="border-t pt-4">
+                    <div className="border-t border-muted pt-4">
                       {log.transcript ? (
                         <div>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => toggleTranscript(log.id)}
-                            className="flex items-center gap-2 hover:bg-muted/50"
+                            className="flex items-center gap-2 p-0 hover:bg-transparent"
                           >
                             <FileText className="h-4 w-4" />
-                            <span className="font-medium">Transkript anzeigen</span>
+                            <span className="font-medium">Transkript</span>
                             {expandedTranscripts.has(log.id) ? (
                               <ChevronDown className="h-4 w-4" />
                             ) : (
@@ -444,17 +402,9 @@ export default function Dashboard() {
                           </Button>
                           
                           {expandedTranscripts.has(log.id) && (
-                            <div className="mt-4 p-4 bg-gradient-to-r from-muted/30 to-muted/10 rounded-lg border">
-                              <div className="flex items-center gap-2 mb-3">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                                  Gesprächstranskript
-                                </h4>
-                              </div>
-                              <div className="prose prose-sm max-w-none">
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap bg-background/50 p-3 rounded border">
-                                  {log.transcript}
-                                </p>
+                            <div className="mt-3 p-3 bg-muted/30 rounded-md border border-muted">
+                              <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                                {log.transcript}
                               </div>
                             </div>
                           )}
@@ -462,9 +412,7 @@ export default function Dashboard() {
                       ) : (
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <FileText className="h-4 w-4" />
-                          <Badge variant="secondary" className="text-xs">
-                            Kein Transkript verfügbar
-                          </Badge>
+                          <span className="text-sm">Kein Transkript verfügbar</span>
                         </div>
                       )}
                     </div>
