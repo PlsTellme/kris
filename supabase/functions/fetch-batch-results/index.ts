@@ -68,40 +68,46 @@ serve(async (req) => {
     console.log(`[DEBUG] Batch data received:`, JSON.stringify(batchData, null, 2));
 
     // Process and store the results
-    if (batchData.calls && Array.isArray(batchData.calls)) {
-      for (const call of batchData.calls) {
+    if (batchData.recipients && Array.isArray(batchData.recipients)) {
+      console.log(`[DEBUG] Processing ${batchData.recipients.length} recipients`);
+      
+      for (const recipient of batchData.recipients) {
         // Check if this call result already exists
         const { data: existingCall } = await supabaseClient
           .from('batch_call_answers')
           .select('id')
           .eq('user_id', user.id)
           .eq('batchid', batchid)
-          .eq('lead_id', call.lead_id || call.id)
-          .single();
+          .eq('lead_id', recipient.conversation_initiation_client_data?.dynamic_variables?.lead_id || recipient.id)
+          .maybeSingle();
 
         if (!existingCall) {
           // Insert new call result
           const callData = {
             user_id: user.id,
             batchid: batchid,
-            callname: batchData.call_name || 'Unknown',
-            lead_id: call.lead_id || call.id,
-            nummer: call.phone_number,
-            vorname: call.conversation_initiation_client_data?.dynamic_variables?.vorname || '',
-            nachname: call.conversation_initiation_client_data?.dynamic_variables?.nachname || '',
-            firma: call.conversation_initiation_client_data?.dynamic_variables?.firma || '',
-            call_status: call.status || 'unknown',
-            anrufdauer: call.duration_seconds || 0,
-            zeitpunkt: call.start_timestamp_unix || Math.floor(Date.now() / 1000),
-            transcript: call.transcript ? JSON.stringify(call.transcript) : null,
-            answers: call.conversation_summary || null,
+            callname: batchData.name || 'Unknown',
+            lead_id: recipient.conversation_initiation_client_data?.dynamic_variables?.lead_id || recipient.id,
+            nummer: recipient.phone_number,
+            vorname: recipient.conversation_initiation_client_data?.dynamic_variables?.vorname || '',
+            nachname: recipient.conversation_initiation_client_data?.dynamic_variables?.nachname || '',
+            firma: recipient.conversation_initiation_client_data?.dynamic_variables?.firma || '',
+            call_status: recipient.status || 'unknown',
+            anrufdauer: 0, // ElevenLabs doesn't provide duration in this endpoint
+            zeitpunkt: recipient.updated_at_unix || Math.floor(Date.now() / 1000),
+            transcript: null, // Will need separate call to get conversation details
+            answers: null,
           };
 
-          await supabaseClient
+          const { error: insertError } = await supabaseClient
             .from('batch_call_answers')
             .insert(callData);
 
-          console.log(`[DEBUG] Inserted call result for lead: ${call.lead_id || call.id}`);
+          if (insertError) {
+            console.error('Error inserting call result:', insertError);
+          } else {
+            console.log(`[DEBUG] Inserted call result for recipient: ${recipient.id}`);
+          }
         }
       }
 
@@ -145,7 +151,7 @@ serve(async (req) => {
       data: answers,
       batch_info: {
         status: batchData.status,
-        total_calls: batchData.calls?.length || 0,
+        total_calls: batchData.recipients?.length || 0,
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
