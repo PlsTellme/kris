@@ -34,8 +34,8 @@ serve(async (req) => {
       });
     }
 
-    const url = new URL(req.url);
-    const batchid = url.pathname.split('/').pop();
+    // Read batch ID from request body (invoked via supabase.functions.invoke)
+    const { batchid } = await req.json();
 
     if (!batchid) {
       return new Response(JSON.stringify({ error: 'Batch ID required' }), {
