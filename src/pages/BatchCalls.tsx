@@ -68,24 +68,7 @@ export default function BatchCalls() {
   const fetchBatchAnswers = async (batchid: string) => {
     setAnswersLoading(true);
     try {
-      // First try to fetch fresh results from ElevenLabs
-      const { data: freshData, error: fetchError } = await supabase.functions.invoke('fetch-batch-results', {
-        body: { batchid },
-      });
-
-      if (!fetchError && freshData?.success) {
-        setBatchAnswers(freshData.data || []);
-        setSelectedBatch(batchid);
-        if (freshData.data && freshData.data.length > 0) {
-          toast({
-            title: "Ergebnisse aktualisiert",
-            description: `${freshData.data.length} Anrufergebnisse geladen`,
-          });
-        }
-        return;
-      }
-
-      // Fallback to existing data
+      // Only try to get existing data from database, don't overwrite webhook data
       const { data, error } = await supabase.functions.invoke('get-batch-answers', {
         body: { batchid }
       });
@@ -205,22 +188,20 @@ export default function BatchCalls() {
                 <BatchCallStarter onBatchStarted={fetchBatchCalls} />
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Call Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Erstellt am</TableHead>
-                    <TableHead>Aktionen</TableHead>
-                  </TableRow>
-                </TableHeader>
+                <Table>
+                 <TableHeader>
+                   <TableRow>
+                     <TableHead>Call Name</TableHead>
+                     <TableHead>Erstellt am</TableHead>
+                     <TableHead>Aktionen</TableHead>
+                   </TableRow>
+                 </TableHeader>
                 <TableBody>
                   {batchCalls.map((batch) => (
                     <TableRow key={batch.id}>
                       <TableCell className="font-medium">
                         {batch.callname || `Batch ${batch.batchid.slice(0, 8)}`}
                       </TableCell>
-                      <TableCell>{getStatusBadge(batch.status)}</TableCell>
                       <TableCell>{formatDate(batch.created_at)}</TableCell>
                       <TableCell>
                         <Button
@@ -249,9 +230,16 @@ export default function BatchCalls() {
                 <FileText className="w-5 h-5" />
                 Batch Ergebnisse
               </CardTitle>
-              <CardDescription>
-                Detaillierte Ergebnisse für Batch {selectedBatch.slice(0, 8)}
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <CardDescription>
+                  Detaillierte Ergebnisse für Batch {selectedBatch.slice(0, 8)}
+                </CardDescription>
+                {batchCalls.find(b => b.batchid === selectedBatch) && (
+                  <div className="text-sm">
+                    Status: {getStatusBadge(batchCalls.find(b => b.batchid === selectedBatch)?.status || 'unknown')}
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {answersLoading ? (

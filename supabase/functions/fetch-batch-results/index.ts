@@ -82,7 +82,7 @@ serve(async (req) => {
           .maybeSingle();
 
         if (!existingCall) {
-          // Insert new call result
+          // Only insert basic call result if no webhook data exists yet
           const callData = {
             user_id: user.id,
             batchid: batchid,
@@ -93,10 +93,10 @@ serve(async (req) => {
             nachname: recipient.conversation_initiation_client_data?.dynamic_variables?.nachname || '',
             firma: recipient.conversation_initiation_client_data?.dynamic_variables?.firma || '',
             call_status: recipient.status || 'unknown',
-            anrufdauer: 0, // ElevenLabs doesn't provide duration in this endpoint
+            anrufdauer: 0, // Will be updated by webhook with actual duration
             zeitpunkt: recipient.updated_at_unix || Math.floor(Date.now() / 1000),
-            transcript: null, // Will need separate call to get conversation details
-            answers: null,
+            transcript: null, // Will be updated by webhook with actual transcript
+            answers: null, // Will be updated by webhook with actual answers
           };
 
           const { error: insertError } = await supabaseClient
@@ -106,8 +106,10 @@ serve(async (req) => {
           if (insertError) {
             console.error('Error inserting call result:', insertError);
           } else {
-            console.log(`[DEBUG] Inserted call result for recipient: ${recipient.id}`);
+            console.log(`[DEBUG] Inserted placeholder call result for recipient: ${recipient.id}`);
           }
+        } else {
+          console.log(`[DEBUG] Call result already exists for recipient: ${recipient.id}`);
         }
       }
 
