@@ -68,6 +68,24 @@ export default function BatchCalls() {
   const fetchBatchAnswers = async (batchid: string) => {
     setAnswersLoading(true);
     try {
+      // First try to fetch fresh results from ElevenLabs
+      const { data: freshData, error: fetchError } = await supabase.functions.invoke('fetch-batch-results', {
+        body: { batchid },
+      });
+
+      if (!fetchError && freshData?.success) {
+        setBatchAnswers(freshData.data || []);
+        setSelectedBatch(batchid);
+        if (freshData.data && freshData.data.length > 0) {
+          toast({
+            title: "Ergebnisse aktualisiert",
+            description: `${freshData.data.length} Anrufergebnisse geladen`,
+          });
+        }
+        return;
+      }
+
+      // Fallback to existing data
       const { data, error } = await supabase.functions.invoke('get-batch-answers', {
         body: { batchid }
       });
@@ -77,6 +95,13 @@ export default function BatchCalls() {
       if (data.success) {
         setBatchAnswers(data.data || []);
         setSelectedBatch(batchid);
+        
+        if (data.data && data.data.length === 0) {
+          toast({
+            title: "Keine Ergebnisse",
+            description: "Die Anrufe sind möglicherweise noch nicht abgeschlossen. Versuchen Sie es in ein paar Minuten erneut.",
+          });
+        }
       }
     } catch (error: any) {
       console.error('Error fetching batch answers:', error);
@@ -237,7 +262,14 @@ export default function BatchCalls() {
               ) : batchAnswers.length === 0 ? (
                 <div className="text-center py-8">
                   <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Noch keine Ergebnisse verfügbar</p>
+                  <p className="text-muted-foreground mb-4">Noch keine Ergebnisse verfügbar</p>
+                  <Button 
+                    onClick={() => fetchBatchAnswers(selectedBatch)} 
+                    variant="outline"
+                    disabled={answersLoading}
+                  >
+                    {answersLoading ? "Lade..." : "Ergebnisse aktualisieren"}
+                  </Button>
                 </div>
               ) : (
                 <Table>
