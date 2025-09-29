@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Phone, Clock, Users, FileText } from "lucide-react";
+import { BatchCallStarter } from "@/components/BatchCallStarter";
 
 interface BatchCall {
   id: string;
@@ -89,12 +90,8 @@ export default function BatchCalls() {
     }
   };
 
-  const startNewBatchCall = async () => {
-    // Placeholder for batch call starter
-    toast({
-      title: "In Entwicklung",
-      description: "Batch-Call-Starter wird bald verfügbar sein",
-    });
+  const startNewBatchCall = () => {
+    // This is now handled by the BatchCallStarter component
   };
 
   const getStatusBadge = (status: string) => {
@@ -160,10 +157,7 @@ export default function BatchCalls() {
             Verwalten Sie Ihre Batch-Anrufe und überprüfen Sie die Ergebnisse
           </p>
         </div>
-        <Button onClick={startNewBatchCall} className="flex items-center gap-2">
-          <Phone className="w-4 h-4" />
-          Neuer Batch-Call
-        </Button>
+        <BatchCallStarter onBatchStarted={fetchBatchCalls} />
       </div>
 
       <div className="grid gap-6">
@@ -183,9 +177,7 @@ export default function BatchCalls() {
               <div className="text-center py-8">
                 <Phone className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">Noch keine Batch-Calls vorhanden</p>
-                <Button onClick={startNewBatchCall} className="mt-4">
-                  Ersten Batch-Call starten
-                </Button>
+                <BatchCallStarter onBatchStarted={fetchBatchCalls} />
               </div>
             ) : (
               <Table>
