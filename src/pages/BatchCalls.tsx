@@ -3,9 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Clock, Users, FileText } from "lucide-react";
+import { Phone, Clock, Users, FileText, ChevronDown, RefreshCw, ChevronRight } from "lucide-react";
 import { BatchCallStarter } from "@/components/BatchCallStarter";
 
 interface BatchCall {
@@ -30,19 +31,37 @@ interface BatchAnswer {
   callname: string;
   answers: any;
   call_status: string;
+  lead_id: string;
+}
+
+interface BatchInfo {
+  status: string;
+  total_calls: number;
 }
 
 export default function BatchCalls() {
   const [batchCalls, setBatchCalls] = useState<BatchCall[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<string | null>(null);
   const [batchAnswers, setBatchAnswers] = useState<BatchAnswer[]>([]);
+  const [batchInfo, setBatchInfo] = useState<BatchInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [answersLoading, setAnswersLoading] = useState(false);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
     fetchBatchCalls();
   }, []);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
 
   const fetchBatchCalls = async () => {
     try {
@@ -65,29 +84,44 @@ export default function BatchCalls() {
     }
   };
 
-  const fetchBatchAnswers = async (batchid: string) => {
+  const syncAndFetchResults = async (batchid: string) => {
     setAnswersLoading(true);
+    
     try {
-      // Only try to get existing data from database, don't overwrite webhook data
-      const { data, error } = await supabase.functions.invoke('get-batch-answers', {
+      // Step 1: Sync with ElevenLabs (fallback mechanism)
+      const { data: syncData, error: syncError } = await supabase.functions.invoke('fetch-batch-results', {
+        body: { batchid }
+      });
+
+      if (syncError) {
+        console.warn('Sync failed, proceeding with database data:', syncError);
+      } else {
+        console.log('Sync completed:', syncData);
+      }
+
+      // Step 2: Fetch current results from database
+      const { data: answersData, error: answersError } = await supabase.functions.invoke('get-batch-answers', {
         body: { batchid }
       });
       
-      if (error) throw error;
+      if (answersError) throw answersError;
       
-      if (data.success) {
-        setBatchAnswers(data.data || []);
+      if (answersData.success) {
+        setBatchAnswers(answersData.data || []);
         setSelectedBatch(batchid);
         
-        if (data.data && data.data.length === 0) {
+        // Set batch info from sync data or default
+        setBatchInfo(syncData?.batch_info || { status: 'unknown', total_calls: answersData.data?.length || 0 });
+        
+        if (!answersData.data || answersData.data.length === 0) {
           toast({
             title: "Keine Ergebnisse",
-            description: "Die Anrufe sind möglicherweise noch nicht abgeschlossen. Versuchen Sie es in ein paar Minuten erneut.",
+            description: "Die Anrufe sind möglicherweise noch nicht abgeschlossen. Auto-Aktualisierung läuft...",
           });
         }
       }
     } catch (error: any) {
-      console.error('Error fetching batch answers:', error);
+      console.error('Error fetching batch results:', error);
       toast({
         title: "Fehler",
         description: "Batch-Antworten konnten nicht geladen werden",
@@ -98,21 +132,51 @@ export default function BatchCalls() {
     }
   };
 
-  const startNewBatchCall = () => {
-    // This is now handled by the BatchCallStarter component
+  const startPolling = (batchid: string) => {
+    // Clear existing polling
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+    }
+
+    // Start new polling every 5 seconds
+    const interval = setInterval(async () => {
+      if (batchInfo?.status === 'completed') {
+        clearInterval(interval);
+        setPollingInterval(null);
+        return;
+      }
+
+      console.log('Auto-refreshing batch results...');
+      await syncAndFetchResults(batchid);
+    }, 5000);
+
+    setPollingInterval(interval);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge variant="default">Abgeschlossen</Badge>;
-      case 'in_progress':
-        return <Badge variant="secondary">Läuft</Badge>;
-      case 'failed':
-        return <Badge variant="destructive">Fehlgeschlagen</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+  const handleViewResults = async (batchid: string) => {
+    await syncAndFetchResults(batchid);
+    startPolling(batchid);
+  };
+
+  const handleManualRefresh = async () => {
+    if (!selectedBatch) return;
+    
+    toast({
+      title: "Synchronisierung",
+      description: "Daten werden aktualisiert...",
+    });
+    
+    await syncAndFetchResults(selectedBatch);
+  };
+
+  const toggleRowExpansion = (answerId: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(answerId)) {
+      newExpanded.delete(answerId);
+    } else {
+      newExpanded.add(answerId);
     }
+    setExpandedRows(newExpanded);
   };
 
   const getCallStatusBadge = (status: string) => {
@@ -141,6 +205,20 @@ export default function BatchCalls() {
 
   const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleString('de-DE');
+  };
+
+  const formatAnswers = (answers: any) => {
+    if (!answers) return 'Keine Antworten';
+    
+    const answerTexts = [];
+    for (let i = 1; i <= 5; i++) {
+      const answer = answers[`answer_${i}`];
+      if (answer) {
+        answerTexts.push(`Antwort ${i}: ${answer}`);
+      }
+    }
+    
+    return answerTexts.length > 0 ? answerTexts.join(' | ') : 'Keine Antworten';
   };
 
   if (loading) {
@@ -177,25 +255,25 @@ export default function BatchCalls() {
               Batch-Call Übersicht
             </CardTitle>
             <CardDescription>
-              Ihre letzten 20 Batch-Calls
+              Ihre letzten Batch-Calls
             </CardDescription>
           </CardHeader>
           <CardContent>
             {batchCalls.length === 0 ? (
               <div className="text-center py-8">
                 <Phone className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Noch keine Batch-Calls vorhanden</p>
+                <p className="text-muted-foreground mb-4">Noch keine Batch-Calls vorhanden</p>
                 <BatchCallStarter onBatchStarted={fetchBatchCalls} />
               </div>
             ) : (
-                <Table>
-                 <TableHeader>
-                   <TableRow>
-                     <TableHead>Call Name</TableHead>
-                     <TableHead>Erstellt am</TableHead>
-                     <TableHead>Aktionen</TableHead>
-                   </TableRow>
-                 </TableHeader>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Call Name</TableHead>
+                    <TableHead>Erstellt am</TableHead>
+                    <TableHead>Aktionen</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                   {batchCalls.map((batch) => (
                     <TableRow key={batch.id}>
@@ -207,11 +285,11 @@ export default function BatchCalls() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => fetchBatchAnswers(batch.batchid)}
+                          onClick={() => handleViewResults(batch.batchid)}
                           disabled={answersLoading}
                         >
                           <FileText className="w-4 h-4 mr-2" />
-                          Ergebnisse
+                          {answersLoading && selectedBatch === batch.batchid ? "Lädt..." : "Ergebnisse"}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -222,7 +300,7 @@ export default function BatchCalls() {
           </CardContent>
         </Card>
 
-        {/* Batch Answers Details */}
+        {/* Batch Results Panel */}
         {selectedBatch && (
           <Card>
             <CardHeader>
@@ -234,11 +312,26 @@ export default function BatchCalls() {
                 <CardDescription>
                   Detaillierte Ergebnisse für Batch {selectedBatch.slice(0, 8)}
                 </CardDescription>
-                {batchCalls.find(b => b.batchid === selectedBatch) && (
-                  <div className="text-sm">
-                    Status: {getStatusBadge(batchCalls.find(b => b.batchid === selectedBatch)?.status || 'unknown')}
-                  </div>
-                )}
+                <div className="flex items-center gap-4">
+                  {batchInfo && (
+                    <div className="text-sm">
+                      Batch-Status: {batchInfo.status === 'completed' ? (
+                        <Badge variant="default">Abgeschlossen</Badge>
+                      ) : (
+                        <Badge variant="secondary">Läuft</Badge>
+                      )}
+                    </div>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleManualRefresh}
+                    disabled={answersLoading}
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${answersLoading ? 'animate-spin' : ''}`} />
+                    Jetzt synchronisieren
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -250,42 +343,97 @@ export default function BatchCalls() {
               ) : batchAnswers.length === 0 ? (
                 <div className="text-center py-8">
                   <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-4">Noch keine Ergebnisse verfügbar</p>
+                  <p className="text-muted-foreground mb-4">
+                    Noch keine Ergebnisse verfügbar. 
+                    {pollingInterval ? " Auto-Aktualisierung läuft..." : ""}
+                  </p>
                   <Button 
-                    onClick={() => fetchBatchAnswers(selectedBatch)} 
+                    onClick={handleManualRefresh} 
                     variant="outline"
                     disabled={answersLoading}
                   >
-                    {answersLoading ? "Lade..." : "Ergebnisse aktualisieren"}
+                    <RefreshCw className={`w-4 h-4 mr-2 ${answersLoading ? 'animate-spin' : ''}`} />
+                    Jetzt synchronisieren
                   </Button>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Firma</TableHead>
-                      <TableHead>Nummer</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Dauer</TableHead>
-                      <TableHead>Zeitpunkt</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {batchAnswers.map((answer) => (
-                      <TableRow key={answer.id}>
-                        <TableCell>
-                          {[answer.vorname, answer.nachname].filter(Boolean).join(' ') || '-'}
-                        </TableCell>
-                        <TableCell>{answer.firma || '-'}</TableCell>
-                        <TableCell className="font-mono">{answer.nummer}</TableCell>
-                        <TableCell>{getCallStatusBadge(answer.call_status)}</TableCell>
-                        <TableCell>{formatDuration(answer.anrufdauer)}</TableCell>
-                        <TableCell>{formatTimestamp(answer.zeitpunkt)}</TableCell>
+                <div className="space-y-2">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10"></TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Firma</TableHead>
+                        <TableHead>Nummer</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Dauer</TableHead>
+                        <TableHead>Zeitpunkt</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {batchAnswers.map((answer) => (
+                        <>
+                          <TableRow key={answer.id} className="cursor-pointer" onClick={() => toggleRowExpansion(answer.id)}>
+                            <TableCell>
+                              {expandedRows.has(answer.id) ? (
+                                <ChevronDown className="w-4 h-4" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4" />
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {[answer.vorname, answer.nachname].filter(Boolean).join(' ') || '-'}
+                            </TableCell>
+                            <TableCell>{answer.firma || '-'}</TableCell>
+                            <TableCell className="font-mono">{answer.nummer}</TableCell>
+                            <TableCell>{getCallStatusBadge(answer.call_status)}</TableCell>
+                            <TableCell>{formatDuration(answer.anrufdauer)}</TableCell>
+                            <TableCell>{formatTimestamp(answer.zeitpunkt)}</TableCell>
+                          </TableRow>
+                          {expandedRows.has(answer.id) && (
+                            <TableRow>
+                              <TableCell colSpan={7} className="p-0">
+                                <div className="px-6 py-4 bg-muted/30 border-t">
+                                  <div className="space-y-4">
+                                    {answer.transcript && (
+                                      <div>
+                                        <h4 className="font-semibold mb-2">Transcript:</h4>
+                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                          {answer.transcript}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {answer.answers && (
+                                      <div>
+                                        <h4 className="font-semibold mb-2">Antworten:</h4>
+                                        <p className="text-sm text-muted-foreground">
+                                          {formatAnswers(answer.answers)}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {!answer.transcript && !answer.answers && (
+                                      <p className="text-sm text-muted-foreground italic">
+                                        Keine zusätzlichen Details verfügbar
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  
+                  {pollingInterval && batchInfo?.status !== 'completed' && (
+                    <div className="text-center py-2">
+                      <p className="text-sm text-muted-foreground">
+                        Auto-Aktualisierung läuft... Nächste Aktualisierung in 5 Sekunden
+                      </p>
+                    </div>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>

@@ -81,61 +81,83 @@ serve(async (req) => {
           .eq('lead_id', recipient.conversation_initiation_client_data?.dynamic_variables?.lead_id || recipient.id)
           .maybeSingle();
 
-        if (!existingCall) {
-          // Get comprehensive call data from ElevenLabs API
-          let callDetails = null;
-          if (recipient.conversation_id) {
-            try {
-              const callResponse = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${recipient.conversation_id}`, {
-                headers: {
-                  'xi-api-key': elevenLabsApiKey!,
-                  'Content-Type': 'application/json',
-                }
-              });
-              
-              if (callResponse.ok) {
-                callDetails = await callResponse.json();
-                console.log(`[DEBUG] Call details for ${recipient.conversation_id}:`, JSON.stringify(callDetails, null, 2));
+        // Use UPSERT instead of INSERT to prevent duplicates and complement missing data
+        let callDetails = null;
+        if (recipient.conversation_id) {
+          try {
+            const callResponse = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${recipient.conversation_id}`, {
+              headers: {
+                'xi-api-key': elevenLabsApiKey!,
+                'Content-Type': 'application/json',
               }
-            } catch (err) {
-              console.error('Error fetching call details:', err);
+            });
+            
+            if (callResponse.ok) {
+              callDetails = await callResponse.json();
+              console.log(`[DEBUG] Call details for ${recipient.conversation_id}:`, JSON.stringify(callDetails, null, 2));
             }
+          } catch (err) {
+            console.error('Error fetching call details:', err);
           }
-
-          const callData = {
-            user_id: user.id,
-            batchid: batchid,
-            callname: batchData.name || 'Unknown',
-            lead_id: recipient.conversation_initiation_client_data?.dynamic_variables?.lead_id || recipient.id,
-            nummer: recipient.phone_number,
-            vorname: recipient.conversation_initiation_client_data?.dynamic_variables?.vorname || '',
-            nachname: recipient.conversation_initiation_client_data?.dynamic_variables?.nachname || '',
-            firma: recipient.conversation_initiation_client_data?.dynamic_variables?.firma || '',
-            call_status: recipient.status || 'unknown',
-            anrufdauer: callDetails?.metadata?.call_duration_secs || 0,
-            zeitpunkt: callDetails?.metadata?.accepted_time_unix_secs || recipient.updated_at_unix || Math.floor(Date.now() / 1000),
-            transcript: callDetails?.transcript ? callDetails.transcript.map((msg: any) => `${msg.role}: ${msg.message}`).join(' --- ') : null,
-            answers: callDetails?.analysis?.data_collection_results ? {
-              answer_1: callDetails.analysis.data_collection_results.answer_1?.value || null,
-              answer_2: callDetails.analysis.data_collection_results.answer_2?.value || null,
-              answer_3: callDetails.analysis.data_collection_results.answer_3?.value || null,
-              answer_4: callDetails.analysis.data_collection_results.answer_4?.value || null,
-              answer_5: callDetails.analysis.data_collection_results.answer_5?.value || null
-            } : null,
-          };
-
-          const { error: insertError } = await supabaseClient
-            .from('batch_call_answers')
-            .insert(callData);
-
-          if (insertError) {
-            console.error('Error inserting call result:', insertError);
-          } else {
-            console.log(`[DEBUG] Inserted placeholder call result for recipient: ${recipient.id}`);
-          }
-        } else {
-          console.log(`[DEBUG] Call result already exists for recipient: ${recipient.id}`);
         }
+
+        // Determine call status
+        let callStatus = recipient.status || 'unknown';
+        if (callDetails?.metadata?.termination_reason) {
+          const termination = callDetails.metadata.termination_reason;
+          if (termination.includes('no_answer') || termination.includes('voicemail_detection')) {
+            callStatus = 'no_answer';
+          } else if (termination.includes('error') || termination.includes('failed')) {
+            callStatus = 'failed';
+          } else if (callDetails.status === 'done') {
+            callStatus = 'success';
+          }
+        }
+
+        const callData = {
+          user_id: user.id,
+          batchid: batchid,
+          callname: batchData.name || 'Unknown',
+          lead_id: recipient.conversation_initiation_client_data?.dynamic_variables?.lead_id || recipient.id,
+          nummer: recipient.phone_number,
+          vorname: recipient.conversation_initiation_client_data?.dynamic_variables?.vorname || '',
+          nachname: recipient.conversation_initiation_client_data?.dynamic_variables?.nachname || '',
+          firma: recipient.conversation_initiation_client_data?.dynamic_variables?.firma || '',
+          call_status: callStatus,
+          anrufdauer: callDetails?.metadata?.call_duration_secs || 0,
+          zeitpunkt: callDetails?.metadata?.accepted_time_unix_secs || recipient.updated_at_unix || Math.floor(Date.now() / 1000),
+          transcript: callDetails?.transcript ? callDetails.transcript.map((msg: any) => `${msg.role}: ${msg.message}`).join(' --- ') : null,
+          answers: callDetails?.analysis?.data_collection_results ? {
+            answer_1: callDetails.analysis.data_collection_results.answer_1?.value || null,
+            answer_2: callDetails.analysis.data_collection_results.answer_2?.value || null,
+            answer_3: callDetails.analysis.data_collection_results.answer_3?.value || null,
+            answer_4: callDetails.analysis.data_collection_results.answer_4?.value || null,
+            answer_5: callDetails.analysis.data_collection_results.answer_5?.value || null
+          } : null,
+        };
+
+        console.log(`[DEBUG] Upserting data for recipient: ${recipient.id}`);
+
+        // UPSERT to complement missing data without overwriting correct webhook data
+        const { error: upsertError } = await supabaseClient
+          .from('batch_call_answers')
+          .upsert(callData, {
+            onConflict: 'user_id,batchid,lead_id',
+            ignoreDuplicates: false
+          });
+
+        if (upsertError) {
+          console.error('Error upserting call result:', upsertError);
+        } else {
+          console.log(`[DEBUG] Successfully upserted call result for recipient: ${recipient.id}`);
+        }
+
+        // Update pending lead status if exists
+        await supabaseClient
+          .from('pending_leads')
+          .update({ status: 'completed' })
+          .eq('batchid', batchid)
+          .eq('lead_id', callData.lead_id);
       }
 
       // Update batch status if completed
@@ -173,12 +195,20 @@ serve(async (req) => {
       });
     }
 
+    // Get final batch status from database
+    const { data: batchStatus } = await supabaseClient
+      .from('batch_calls')
+      .select('status')
+      .eq('batchid', batchid)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
     return new Response(JSON.stringify({
       success: true,
       data: answers,
       batch_info: {
-        status: batchData.status,
-        total_calls: batchData.recipients?.length || 0,
+        status: batchStatus?.status || batchData.status || 'unknown',
+        total_calls: batchData.recipients?.length || answers?.length || 0,
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
