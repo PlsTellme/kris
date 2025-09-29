@@ -28,6 +28,7 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [callName, setCallName] = useState("");
+  const [agentPhoneNumberId, setAgentPhoneNumberId] = useState("");
   const [agentId, setAgentId] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -122,11 +123,21 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
       return;
     }
 
+    if (!agentPhoneNumberId.trim()) {
+      toast({
+        title: "Fehler",
+        description: "Bitte geben Sie eine Agent Phone Number ID ein",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const batchCallData = {
         call_name: callName,
         agent_id: agentId,
+        agent_phone_number_id: agentPhoneNumberId,
         recipients: contacts.map(contact => ({
           phone_number: contact.nummer,
           conversation_initiation_client_data: {
@@ -156,6 +167,7 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
         setContacts([]);
         setCallName("");
         setAgentId("");
+        setAgentPhoneNumberId("");
         onBatchStarted();
       } else {
         throw new Error(data.error || "Unbekannter Fehler");
@@ -195,7 +207,7 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
               <CardTitle className="text-lg">Konfiguration</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label htmlFor="callName">Call-Name</Label>
                   <Input
@@ -211,7 +223,16 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
                     id="agentId"
                     value={agentId}
                     onChange={(e) => setAgentId(e.target.value)}
-                    placeholder="Agent-ID von ElevenLabs"
+                    placeholder="agent_01..."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="agentPhoneNumberId">Agent Phone Number ID</Label>
+                  <Input
+                    id="agentPhoneNumberId"
+                    value={agentPhoneNumberId}
+                    onChange={(e) => setAgentPhoneNumberId(e.target.value)}
+                    placeholder="phnum_01..."
                   />
                 </div>
               </div>
@@ -330,7 +351,7 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
             </Button>
             <Button
               onClick={startBatchCall}
-              disabled={loading || contacts.length === 0 || !callName.trim() || !agentId.trim()}
+              disabled={loading || contacts.length === 0 || !callName.trim() || !agentId.trim() || !agentPhoneNumberId.trim()}
             >
               {loading ? "Wird gestartet..." : `Batch-Call starten (${contacts.length} Kontakte)`}
             </Button>

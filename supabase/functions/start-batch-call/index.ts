@@ -53,10 +53,13 @@ serve(async (req) => {
       });
     }
 
-    // Call ElevenLabs API
+    // Call ElevenLabs API with the exact format expected
     const elevenLabsBody = {
-      ...requestBody,
-      scheduled_time_unix: Math.floor(Date.now() / 1000)
+      call_name: requestBody.call_name,
+      agent_id: requestBody.agent_id,
+      agent_phone_number_id: requestBody.agent_phone_number_id,
+      scheduled_time_unix: Math.floor(Date.now() / 1000),
+      recipients: requestBody.recipients
     };
 
     const response = await fetch("https://api.elevenlabs.io/v1/convai/batch-calling/submit", {
