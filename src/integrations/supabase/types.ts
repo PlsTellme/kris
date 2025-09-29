@@ -56,6 +56,93 @@ export type Database = {
         }
         Relationships: []
       }
+      batch_call_answers: {
+        Row: {
+          anrufdauer: number | null
+          answers: Json | null
+          batchid: string
+          call_status: string | null
+          callname: string | null
+          created_at: string
+          firma: string | null
+          id: string
+          lead_id: string | null
+          nachname: string | null
+          nummer: string | null
+          transcript: string | null
+          updated_at: string
+          user_id: string
+          vorname: string | null
+          zeitpunkt: number
+        }
+        Insert: {
+          anrufdauer?: number | null
+          answers?: Json | null
+          batchid: string
+          call_status?: string | null
+          callname?: string | null
+          created_at?: string
+          firma?: string | null
+          id?: string
+          lead_id?: string | null
+          nachname?: string | null
+          nummer?: string | null
+          transcript?: string | null
+          updated_at?: string
+          user_id: string
+          vorname?: string | null
+          zeitpunkt: number
+        }
+        Update: {
+          anrufdauer?: number | null
+          answers?: Json | null
+          batchid?: string
+          call_status?: string | null
+          callname?: string | null
+          created_at?: string
+          firma?: string | null
+          id?: string
+          lead_id?: string | null
+          nachname?: string | null
+          nummer?: string | null
+          transcript?: string | null
+          updated_at?: string
+          user_id?: string
+          vorname?: string | null
+          zeitpunkt?: number
+        }
+        Relationships: []
+      }
+      batch_calls: {
+        Row: {
+          batchid: string
+          callname: string | null
+          created_at: string
+          id: string
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          batchid: string
+          callname?: string | null
+          created_at?: string
+          id?: string
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          batchid?: string
+          callname?: string | null
+          created_at?: string
+          id?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       call_logs: {
         Row: {
           call_timestamp_unix: number
@@ -95,6 +182,48 @@ export type Database = {
           updated_at?: string
           verbrauch?: number | null
           zusammenfassung?: string | null
+        }
+        Relationships: []
+      }
+      pending_leads: {
+        Row: {
+          batchid: string
+          call_name: string | null
+          created_at: string
+          firma: string | null
+          id: string
+          lead_id: string
+          nachname: string | null
+          nummer: string | null
+          status: string | null
+          user_id: string
+          vorname: string | null
+        }
+        Insert: {
+          batchid: string
+          call_name?: string | null
+          created_at?: string
+          firma?: string | null
+          id?: string
+          lead_id: string
+          nachname?: string | null
+          nummer?: string | null
+          status?: string | null
+          user_id: string
+          vorname?: string | null
+        }
+        Update: {
+          batchid?: string
+          call_name?: string | null
+          created_at?: string
+          firma?: string | null
+          id?: string
+          lead_id?: string
+          nachname?: string | null
+          nummer?: string | null
+          status?: string | null
+          user_id?: string
+          vorname?: string | null
         }
         Relationships: []
       }
