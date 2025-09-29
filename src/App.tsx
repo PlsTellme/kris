@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import CreateAgent from "./pages/CreateAgent";
 import ManageAgents from "./pages/ManageAgents";
 import PhoneNumbers from "./pages/PhoneNumbers";
+import BatchCalls from "./pages/BatchCalls";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -44,6 +45,11 @@ const App = () => (
           <Route path="/phone-numbers" element={
             <DashboardLayout>
               <PhoneNumbers />
+            </DashboardLayout>
+          } />
+          <Route path="/batch-calls" element={
+            <DashboardLayout>
+              <BatchCalls />
             </DashboardLayout>
           } />
           <Route path="/settings" element={

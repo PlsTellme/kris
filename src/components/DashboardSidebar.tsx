@@ -7,7 +7,8 @@ import {
   Phone, 
   Settings, 
   LogOut,
-  Plus
+  Plus,
+  PhoneCall
 } from "lucide-react";
 import {
   Sidebar,
@@ -33,6 +34,7 @@ const premiumMenuItems = [
   { title: "Agent erstellen", url: "/create-agent", icon: Plus },
   { title: "Agenten verwalten", url: "/manage-agents", icon: Bot },
   { title: "Telefonnummern", url: "/phone-numbers", icon: Phone },
+  { title: "Batch-Calls", url: "/batch-calls", icon: PhoneCall },
 ];
 
 interface DashboardSidebarProps {
