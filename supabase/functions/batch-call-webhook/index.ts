@@ -11,8 +11,11 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log("Webhook request received");
+  console.log("=== WEBHOOK REQUEST RECEIVED ===");
   console.log("Timestamp:", new Date().toISOString());
+  console.log("Method:", req.method);
+  console.log("URL:", req.url);
+  console.log("Headers:", Object.fromEntries(req.headers.entries()));
 
   try {
     const supabaseClient = createClient(

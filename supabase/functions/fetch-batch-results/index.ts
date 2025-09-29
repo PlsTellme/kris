@@ -82,7 +82,26 @@ serve(async (req) => {
           .maybeSingle();
 
         if (!existingCall) {
-          // Only insert basic call result if no webhook data exists yet
+          // Get comprehensive call data from ElevenLabs API
+          let callDetails = null;
+          if (recipient.conversation_id) {
+            try {
+              const callResponse = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${recipient.conversation_id}`, {
+                headers: {
+                  'xi-api-key': elevenLabsApiKey!,
+                  'Content-Type': 'application/json',
+                }
+              });
+              
+              if (callResponse.ok) {
+                callDetails = await callResponse.json();
+                console.log(`[DEBUG] Call details for ${recipient.conversation_id}:`, JSON.stringify(callDetails, null, 2));
+              }
+            } catch (err) {
+              console.error('Error fetching call details:', err);
+            }
+          }
+
           const callData = {
             user_id: user.id,
             batchid: batchid,
@@ -93,10 +112,16 @@ serve(async (req) => {
             nachname: recipient.conversation_initiation_client_data?.dynamic_variables?.nachname || '',
             firma: recipient.conversation_initiation_client_data?.dynamic_variables?.firma || '',
             call_status: recipient.status || 'unknown',
-            anrufdauer: 0, // Will be updated by webhook with actual duration
-            zeitpunkt: recipient.updated_at_unix || Math.floor(Date.now() / 1000),
-            transcript: null, // Will be updated by webhook with actual transcript
-            answers: null, // Will be updated by webhook with actual answers
+            anrufdauer: callDetails?.metadata?.call_duration_secs || 0,
+            zeitpunkt: callDetails?.metadata?.accepted_time_unix_secs || recipient.updated_at_unix || Math.floor(Date.now() / 1000),
+            transcript: callDetails?.transcript ? callDetails.transcript.map((msg: any) => `${msg.role}: ${msg.message}`).join(' --- ') : null,
+            answers: callDetails?.analysis?.data_collection_results ? {
+              answer_1: callDetails.analysis.data_collection_results.answer_1?.value || null,
+              answer_2: callDetails.analysis.data_collection_results.answer_2?.value || null,
+              answer_3: callDetails.analysis.data_collection_results.answer_3?.value || null,
+              answer_4: callDetails.analysis.data_collection_results.answer_4?.value || null,
+              answer_5: callDetails.analysis.data_collection_results.answer_5?.value || null
+            } : null,
           };
 
           const { error: insertError } = await supabaseClient
