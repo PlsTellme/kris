@@ -59,18 +59,33 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
     const lines = csvText.split('\n').filter(line => line.trim());
     const newContacts: Contact[] = [];
     
-    // Skip header line if it exists
-    const startIndex = lines[0]?.toLowerCase().includes('name') || lines[0]?.toLowerCase().includes('nummer') ? 1 : 0;
+    // Check if first line is a header
+    const firstLine = lines[0]?.toLowerCase();
+    const hasHeader = firstLine?.includes('vorname') || firstLine?.includes('name') || firstLine?.includes('phone');
+    
+    // Parse header to determine column mapping
+    let vornameIdx = 0, nachnameIdx = 1, firmaIdx = 2, nummerIdx = 2;
+    
+    if (hasHeader) {
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      vornameIdx = headers.findIndex(h => h.includes('vorname')) ?? 0;
+      nachnameIdx = headers.findIndex(h => h.includes('name') && !h.includes('vorname')) ?? 1;
+      nummerIdx = headers.findIndex(h => h.includes('phone') || h.includes('nummer') || h.includes('telefon')) ?? 2;
+      // Firma could be in any remaining column, default to -1 if not found
+      firmaIdx = headers.findIndex(h => h.includes('firma') || h.includes('company')) ?? -1;
+    }
+    
+    const startIndex = hasHeader ? 1 : 0;
     
     for (let i = startIndex; i < lines.length; i++) {
       const columns = lines[i].split(',').map(col => col.trim().replace(/"/g, ''));
       if (columns.length >= 2) {
         newContacts.push({
           id: crypto.randomUUID(),
-          vorname: columns[0] || "",
-          nachname: columns[1] || "",
-          firma: columns[2] || "",
-          nummer: columns[3] || columns[1], // Fallback to second column if no fourth
+          vorname: columns[vornameIdx] || "",
+          nachname: columns[nachnameIdx] || "",
+          firma: firmaIdx >= 0 ? (columns[firmaIdx] || "") : "",
+          nummer: columns[nummerIdx] || "",
           call_name: callName || "Batch Call"
         });
       }
