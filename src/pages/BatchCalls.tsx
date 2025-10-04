@@ -178,16 +178,16 @@ export default function BatchCalls() {
     setExpandedRows(newExpanded);
   };
 
-  const getCallStatusBadge = (status: string) => {
+  const getRowClassName = (status: string) => {
     switch (status) {
       case 'success':
-        return <Badge variant="default">Erfolgreich</Badge>;
+        return 'bg-green-500/10 hover:bg-green-500/20';
       case 'no_answer':
-        return <Badge variant="secondary">Keine Antwort</Badge>;
+        return 'bg-yellow-500/10 hover:bg-yellow-500/20';
       case 'failed':
-        return <Badge variant="destructive">Fehlgeschlagen</Badge>;
+        return 'bg-red-500/10 hover:bg-red-500/20';
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return 'hover:bg-muted/50';
     }
   };
 
@@ -421,7 +421,6 @@ export default function BatchCalls() {
                         <TableHead>Call Name</TableHead>
                         <TableHead>Zeitpunkt</TableHead>
                         <TableHead>Dauer</TableHead>
-                        <TableHead>Status</TableHead>
                         <TableHead className="w-1/3">Transcript</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -431,7 +430,7 @@ export default function BatchCalls() {
                         return (
                           <TableRow 
                             key={answer.id} 
-                            className="cursor-pointer hover:bg-muted/50"
+                            className={`cursor-pointer ${getRowClassName(answer.call_status)}`}
                             onClick={() => toggleRowExpansion(answer.id)}
                           >
                             <TableCell>
@@ -449,7 +448,6 @@ export default function BatchCalls() {
                             <TableCell>{answer.callname || '–'}</TableCell>
                             <TableCell className="text-sm">{formatTimestamp(answer.zeitpunkt)}</TableCell>
                             <TableCell className="font-mono text-sm">{formatDuration(answer.anrufdauer)}</TableCell>
-                            <TableCell>{getCallStatusBadge(answer.call_status)}</TableCell>
                             <TableCell 
                               className={`text-sm ${
                                 isExpanded 
