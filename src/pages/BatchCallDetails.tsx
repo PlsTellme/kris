@@ -338,12 +338,12 @@ export default function BatchCallDetails() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-left">Lead</TableHead>
-                    <TableHead className="text-left">Firma</TableHead>
-                    <TableHead className="text-left">Nummer</TableHead>
-                    <TableHead className="text-left">Call Name</TableHead>
-                    <TableHead className="text-left">Zeitpunkt</TableHead>
-                    <TableHead className="text-left">Dauer</TableHead>
+                    <TableHead className="text-left border-r border-border/40">Lead</TableHead>
+                    <TableHead className="text-left border-r border-border/40">Firma</TableHead>
+                    <TableHead className="text-left border-r border-border/40">Nummer</TableHead>
+                    <TableHead className="text-left border-r border-border/40">Call Name</TableHead>
+                    <TableHead className="text-left border-r border-border/40">Zeitpunkt</TableHead>
+                    <TableHead className="text-left border-r border-border/40">Dauer</TableHead>
                     <TableHead className="text-left">Transcript</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -355,15 +355,15 @@ export default function BatchCallDetails() {
                         key={answer.id} 
                         className={`border-b ${getRowClassName(answer.call_status)}`}
                       >
-                        <TableCell className="text-left">
+                        <TableCell className="text-left align-top border-r border-border/40">
                           {[answer.vorname, answer.nachname].filter(Boolean).join(' ') || '–'}
                         </TableCell>
-                        <TableCell className="text-left">{answer.firma || '–'}</TableCell>
-                        <TableCell className="text-left font-mono text-sm">{answer.nummer || '–'}</TableCell>
-                        <TableCell className="text-left">{answer.callname || '–'}</TableCell>
-                        <TableCell className="text-left text-sm">{formatTimestamp(answer.zeitpunkt)}</TableCell>
-                        <TableCell className="text-left font-mono text-sm">{formatDuration(answer.anrufdauer)}</TableCell>
-                        <TableCell className="text-left">
+                        <TableCell className="text-left align-top border-r border-border/40">{answer.firma || '–'}</TableCell>
+                        <TableCell className="text-left align-top font-mono text-sm border-r border-border/40">{answer.nummer || '–'}</TableCell>
+                        <TableCell className="text-left align-top border-r border-border/40">{answer.callname || '–'}</TableCell>
+                        <TableCell className="text-left align-top text-sm border-r border-border/40">{formatTimestamp(answer.zeitpunkt)}</TableCell>
+                        <TableCell className="text-left align-top font-mono text-sm border-r border-border/40">{formatDuration(answer.anrufdauer)}</TableCell>
+                        <TableCell className="text-left align-top">
                           <Collapsible open={isExpanded} onOpenChange={() => toggleRowExpansion(answer.id)}>
                             <CollapsibleTrigger asChild>
                               <Button variant="ghost" size="sm" className="gap-2">
