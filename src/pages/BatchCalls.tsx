@@ -47,7 +47,6 @@ export default function BatchCalls() {
   const fetchBatchCalls = async (page: number = 1) => {
     setLoading(true);
     try {
-      const url = new URL(`${supabase.functions.invoke}/get-batch-calls`);
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
 
