@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Clock, FileText, RefreshCw, Download, ChevronDown, ChevronRight } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface BatchAnswer {
   id: string;
@@ -42,7 +43,6 @@ export default function BatchCallDetails() {
   useEffect(() => {
     if (batchId) {
       syncAndFetchResults(batchId);
-      startPolling(batchId);
     }
 
     return () => {
@@ -51,6 +51,19 @@ export default function BatchCallDetails() {
       }
     };
   }, [batchId]);
+
+  // Start polling only after we have batch info
+  useEffect(() => {
+    if (batchId && batchInfo && batchInfo.status !== 'completed') {
+      startPolling(batchId);
+    }
+    
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [batchInfo?.status]);
 
   const syncAndFetchResults = async (batchid: string) => {
     setLoading(true);
@@ -100,6 +113,11 @@ export default function BatchCallDetails() {
   };
 
   const startPolling = (batchid: string) => {
+    // Only poll if batch is not completed
+    if (batchInfo?.status === 'completed') {
+      return;
+    }
+
     // Clear existing polling
     if (pollingInterval) {
       clearInterval(pollingInterval);
@@ -107,14 +125,14 @@ export default function BatchCallDetails() {
 
     // Start new polling every 5 seconds
     const interval = setInterval(async () => {
+      console.log('Auto-refreshing batch results...');
+      await syncAndFetchResults(batchid);
+      
+      // Check if batch is now completed and stop polling
       if (batchInfo?.status === 'completed') {
         clearInterval(interval);
         setPollingInterval(null);
-        return;
       }
-
-      console.log('Auto-refreshing batch results...');
-      await syncAndFetchResults(batchid);
     }, 5000);
 
     setPollingInterval(interval);
@@ -320,14 +338,13 @@ export default function BatchCallDetails() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-10"></TableHead>
-                    <TableHead>Lead</TableHead>
-                    <TableHead>Firma</TableHead>
-                    <TableHead>Nummer</TableHead>
-                    <TableHead>Call Name</TableHead>
-                    <TableHead>Zeitpunkt</TableHead>
-                    <TableHead>Dauer</TableHead>
-                    <TableHead className="w-1/3">Transcript</TableHead>
+                    <TableHead className="text-left">Lead</TableHead>
+                    <TableHead className="text-left">Firma</TableHead>
+                    <TableHead className="text-left">Nummer</TableHead>
+                    <TableHead className="text-left">Call Name</TableHead>
+                    <TableHead className="text-left">Zeitpunkt</TableHead>
+                    <TableHead className="text-left">Dauer</TableHead>
+                    <TableHead className="text-left">Transcript</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -336,32 +353,34 @@ export default function BatchCallDetails() {
                     return (
                       <TableRow 
                         key={answer.id} 
-                        className={`cursor-pointer ${getRowClassName(answer.call_status)}`}
-                        onClick={() => toggleRowExpansion(answer.id)}
+                        className={`border-b ${getRowClassName(answer.call_status)}`}
                       >
-                        <TableCell>
-                          {isExpanded ? (
-                            <ChevronDown className="w-4 h-4" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4" />
-                          )}
-                        </TableCell>
-                        <TableCell>
+                        <TableCell className="text-left">
                           {[answer.vorname, answer.nachname].filter(Boolean).join(' ') || '–'}
                         </TableCell>
-                        <TableCell>{answer.firma || '–'}</TableCell>
-                        <TableCell className="font-mono text-sm">{answer.nummer || '–'}</TableCell>
-                        <TableCell>{answer.callname || '–'}</TableCell>
-                        <TableCell className="text-sm">{formatTimestamp(answer.zeitpunkt)}</TableCell>
-                        <TableCell className="font-mono text-sm">{formatDuration(answer.anrufdauer)}</TableCell>
-                        <TableCell 
-                          className={`text-sm ${
-                            isExpanded 
-                              ? 'whitespace-pre-wrap break-words' 
-                              : 'truncate max-w-xs'
-                          }`}
-                        >
-                          {answer.transcript || '–'}
+                        <TableCell className="text-left">{answer.firma || '–'}</TableCell>
+                        <TableCell className="text-left font-mono text-sm">{answer.nummer || '–'}</TableCell>
+                        <TableCell className="text-left">{answer.callname || '–'}</TableCell>
+                        <TableCell className="text-left text-sm">{formatTimestamp(answer.zeitpunkt)}</TableCell>
+                        <TableCell className="text-left font-mono text-sm">{formatDuration(answer.anrufdauer)}</TableCell>
+                        <TableCell className="text-left">
+                          <Collapsible open={isExpanded} onOpenChange={() => toggleRowExpansion(answer.id)}>
+                            <CollapsibleTrigger asChild>
+                              <Button variant="ghost" size="sm" className="gap-2">
+                                {isExpanded ? (
+                                  <ChevronDown className="w-4 h-4" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4" />
+                                )}
+                                Transcript anzeigen
+                              </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="mt-2">
+                              <div className="text-sm whitespace-pre-wrap break-words p-3 bg-muted/30 rounded-md">
+                                {answer.transcript || '–'}
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
                         </TableCell>
                       </TableRow>
                     );
