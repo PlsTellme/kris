@@ -3,10 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Clock, Users, FileText, ChevronDown, RefreshCw, ChevronRight } from "lucide-react";
+import { Phone, Clock, Users, FileText, ChevronDown, RefreshCw, ChevronRight, Download } from "lucide-react";
 import { BatchCallStarter } from "@/components/BatchCallStarter";
 
 interface BatchCall {
@@ -48,6 +48,11 @@ export default function BatchCalls() {
   const [answersLoading, setAnswersLoading] = useState(false);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [transcriptModal, setTranscriptModal] = useState<{ open: boolean; content: string; name: string }>({ 
+    open: false, 
+    content: "", 
+    name: "" 
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -208,17 +213,71 @@ export default function BatchCalls() {
   };
 
   const formatAnswers = (answers: any) => {
-    if (!answers) return 'Keine Antworten';
+    if (!answers) return null;
     
-    const answerTexts = [];
-    for (let i = 1; i <= 5; i++) {
-      const answer = answers[`answer_${i}`];
-      if (answer) {
-        answerTexts.push(`Antwort ${i}: ${answer}`);
-      }
+    const entries = Object.entries(answers).filter(([_, value]) => value);
+    return entries.length > 0 ? entries : null;
+  };
+
+  const exportToCSV = () => {
+    if (batchAnswers.length === 0) {
+      toast({
+        title: "Keine Daten",
+        description: "Es gibt keine Ergebnisse zum Exportieren",
+        variant: "destructive",
+      });
+      return;
     }
+
+    const headers = [
+      "lead_id",
+      "vorname", 
+      "nachname",
+      "firma",
+      "nummer",
+      "callname",
+      "zeitpunkt_iso",
+      "anrufdauer_sekunden",
+      "call_status",
+      "transcript",
+      "answers_json"
+    ];
+
+    const rows = batchAnswers.map(answer => [
+      answer.lead_id || "",
+      answer.vorname || "",
+      answer.nachname || "",
+      answer.firma || "",
+      answer.nummer || "",
+      answer.callname || "",
+      answer.zeitpunkt ? new Date(answer.zeitpunkt * 1000).toISOString() : "",
+      answer.anrufdauer?.toString() || "0",
+      answer.call_status || "",
+      (answer.transcript || "").replace(/"/g, '""'),
+      JSON.stringify(answer.answers || {}).replace(/"/g, '""')
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
     
-    return answerTexts.length > 0 ? answerTexts.join(' | ') : 'Keine Antworten';
+    link.setAttribute("href", url);
+    link.setAttribute("download", `batch_${selectedBatch?.slice(0, 8)}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export erfolgreich",
+      description: `${batchAnswers.length} Ergebnisse exportiert`,
+    });
   };
 
   if (loading) {
@@ -312,7 +371,7 @@ export default function BatchCalls() {
                 <CardDescription>
                   Detaillierte Ergebnisse für Batch {selectedBatch.slice(0, 8)}
                 </CardDescription>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
                   {batchInfo && (
                     <div className="text-sm">
                       Batch-Status: {batchInfo.status === 'completed' ? (
@@ -322,6 +381,15 @@ export default function BatchCalls() {
                       )}
                     </div>
                   )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportToCSV}
+                    disabled={answersLoading || batchAnswers.length === 0}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    CSV Export
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -373,7 +441,7 @@ export default function BatchCalls() {
                     <TableBody>
                       {batchAnswers.map((answer) => (
                         <>
-                          <TableRow key={answer.id} className="cursor-pointer" onClick={() => toggleRowExpansion(answer.id)}>
+                          <TableRow key={answer.id} className="cursor-pointer hover:bg-muted/50" onClick={() => toggleRowExpansion(answer.id)}>
                             <TableCell>
                               {expandedRows.has(answer.id) ? (
                                 <ChevronDown className="w-4 h-4" />
@@ -385,32 +453,71 @@ export default function BatchCalls() {
                               {[answer.vorname, answer.nachname].filter(Boolean).join(' ') || '-'}
                             </TableCell>
                             <TableCell>{answer.firma || '-'}</TableCell>
-                            <TableCell className="font-mono">{answer.nummer}</TableCell>
+                            <TableCell className="font-mono text-sm">{answer.nummer || '-'}</TableCell>
                             <TableCell>{getCallStatusBadge(answer.call_status)}</TableCell>
-                            <TableCell>{formatDuration(answer.anrufdauer)}</TableCell>
-                            <TableCell>{formatTimestamp(answer.zeitpunkt)}</TableCell>
+                            <TableCell className="font-mono text-sm">{formatDuration(answer.anrufdauer)}</TableCell>
+                            <TableCell className="text-sm">{formatTimestamp(answer.zeitpunkt)}</TableCell>
                           </TableRow>
                           {expandedRows.has(answer.id) && (
                             <TableRow>
                               <TableCell colSpan={7} className="p-0">
                                 <div className="px-6 py-4 bg-muted/30 border-t">
                                   <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                      <div>
+                                        <span className="font-medium text-muted-foreground">Lead ID:</span>
+                                        <p className="font-mono text-xs mt-1">{answer.lead_id || '-'}</p>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-muted-foreground">Call Name:</span>
+                                        <p className="mt-1">{answer.callname || '-'}</p>
+                                      </div>
+                                    </div>
+
+                                    {answer.answers && formatAnswers(answer.answers) && (
+                                      <div>
+                                        <h4 className="font-semibold mb-2 flex items-center justify-between">
+                                          Antworten
+                                        </h4>
+                                        <div className="space-y-2 bg-background/50 rounded-md p-3 border">
+                                          {formatAnswers(answer.answers)!.map(([key, value]) => (
+                                            <div key={key} className="flex items-start gap-2">
+                                              <span className="font-medium text-muted-foreground min-w-24">{key}:</span>
+                                              <span className="text-sm">{String(value)}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
                                     {answer.transcript && (
                                       <div>
-                                        <h4 className="font-semibold mb-2">Transcript:</h4>
-                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                          {answer.transcript}
-                                        </p>
+                                        <div className="flex items-center justify-between mb-2">
+                                          <h4 className="font-semibold">Transcript</h4>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setTranscriptModal({
+                                                open: true,
+                                                content: answer.transcript,
+                                                name: [answer.vorname, answer.nachname].filter(Boolean).join(' ') || 'Unbekannt'
+                                              });
+                                            }}
+                                          >
+                                            Vollständig anzeigen
+                                          </Button>
+                                        </div>
+                                        <div className="bg-background/50 rounded-md p-3 border max-h-32 overflow-y-auto">
+                                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                            {answer.transcript.split('---').slice(0, 3).join('\n---\n')}
+                                            {answer.transcript.split('---').length > 3 && '\n...'}
+                                          </p>
+                                        </div>
                                       </div>
                                     )}
-                                    {answer.answers && (
-                                      <div>
-                                        <h4 className="font-semibold mb-2">Antworten:</h4>
-                                        <p className="text-sm text-muted-foreground">
-                                          {formatAnswers(answer.answers)}
-                                        </p>
-                                      </div>
-                                    )}
+
                                     {!answer.transcript && !answer.answers && (
                                       <p className="text-sm text-muted-foreground italic">
                                         Keine zusätzlichen Details verfügbar
@@ -439,6 +546,43 @@ export default function BatchCalls() {
           </Card>
         )}
       </div>
+
+      {/* Transcript Modal */}
+      <Dialog open={transcriptModal.open} onOpenChange={(open) => setTranscriptModal({ ...transcriptModal, open })}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Transcript – {transcriptModal.name}</DialogTitle>
+            <DialogDescription>
+              Vollständiger Gesprächsverlauf
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[60vh] bg-muted/30 rounded-md p-4 border">
+            <div className="space-y-3">
+              {transcriptModal.content.split('---').map((line, idx) => {
+                const trimmed = line.trim();
+                if (!trimmed) return null;
+                
+                const isAgent = trimmed.toLowerCase().startsWith('agent:');
+                const isUser = trimmed.toLowerCase().startsWith('user:');
+                
+                return (
+                  <div key={idx} className={`flex ${isAgent ? 'justify-start' : 'justify-end'}`}>
+                    <div className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                      isAgent 
+                        ? 'bg-primary/10 text-foreground' 
+                        : isUser 
+                          ? 'bg-accent/10 text-foreground'
+                          : 'bg-muted text-muted-foreground'
+                    }`}>
+                      <p className="text-sm whitespace-pre-wrap">{trimmed}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

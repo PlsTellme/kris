@@ -96,15 +96,17 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
   };
 
   const startBatchCall = async () => {
-    if (!callName.trim()) {
+    // Validierung: Call-Name (1-140 Zeichen)
+    if (!callName.trim() || callName.trim().length > 140) {
       toast({
         title: "Fehler",
-        description: "Bitte geben Sie einen Call-Namen ein",
+        description: "Bitte geben Sie einen Call-Namen ein (1-140 Zeichen)",
         variant: "destructive",
       });
       return;
     }
 
+    // Validierung: Kontakte (1-200)
     if (contacts.length === 0) {
       toast({
         title: "Fehler", 
@@ -114,6 +116,16 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
       return;
     }
 
+    if (contacts.length > 200) {
+      toast({
+        title: "Fehler",
+        description: "Maximal 200 Kontakte pro Batch-Call erlaubt",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validierung: Agent-ID
     if (!agentId.trim()) {
       toast({
         title: "Fehler",
@@ -123,10 +135,23 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
       return;
     }
 
+    // Validierung: Phone Number ID
     if (!agentPhoneNumberId.trim()) {
       toast({
         title: "Fehler",
         description: "Bitte geben Sie eine Agent Phone Number ID ein",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validierung: Telefonnummern
+    const phoneRegex = /^\+?[0-9]{7,15}$/;
+    const invalidContacts = contacts.filter(c => !phoneRegex.test(c.nummer.replace(/\s/g, '')));
+    if (invalidContacts.length > 0) {
+      toast({
+        title: "Fehler",
+        description: `${invalidContacts.length} Kontakt(e) haben ungültige Telefonnummern. Format: +49... (7-15 Ziffern)`,
         variant: "destructive",
       });
       return;
