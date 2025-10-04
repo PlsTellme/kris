@@ -49,11 +49,25 @@ export default function BatchCallDetails() {
 
   const fetchBatchInfo = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('get-batch-calls', {
-        body: { page: 1, pageSize: 100 }
-      });
-      
-      if (error) throw error;
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      if (!token) {
+        console.warn('No auth token available');
+        return;
+      }
+
+      const response = await fetch(
+        `https://ubqcxxfynhnwhvtogkvx.supabase.co/functions/v1/get-batch-calls?page=1&pageSize=100`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const data = await response.json();
       
       if (data?.success && data.items) {
         const batch = data.items.find((b: any) => b.batchid === batchId);

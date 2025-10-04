@@ -47,17 +47,33 @@ export default function BatchCalls() {
   const fetchBatchCalls = async (page: number = 1) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('get-batch-calls', {
-        body: { page, pageSize: 20 }
-      });
-      
-      if (error) throw error;
+      const url = new URL(`${supabase.functions.invoke}/get-batch-calls`);
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      if (!token) {
+        throw new Error('No auth token');
+      }
+
+      const response = await fetch(
+        `https://ubqcxxfynhnwhvtogkvx.supabase.co/functions/v1/get-batch-calls?page=${page}&pageSize=20`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const data = await response.json();
       
       if (data?.success) {
         setBatchCalls(data.items || []);
         if (data.pagination) {
           setPagination(data.pagination);
         }
+      } else {
+        throw new Error(data.error || 'Failed to fetch batch calls');
       }
     } catch (error: any) {
       console.error('Error fetching batch calls:', error);

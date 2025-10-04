@@ -34,12 +34,28 @@ serve(async (req) => {
       });
     }
 
+    // Get pagination parameters from URL
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
+    const offset = (page - 1) * pageSize;
+
+    // Get total count
+    const { count } = await supabaseClient
+      .from('batch_calls')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+
+    const total = count || 0;
+    const totalPages = Math.ceil(total / pageSize);
+
+    // Get paginated data
     const { data: batchCalls, error } = await supabaseClient
       .from('batch_calls')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .range(offset, offset + pageSize - 1);
 
     if (error) {
       console.error('Error fetching batch calls:', error);
@@ -51,7 +67,15 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      batchcalls: batchCalls
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      },
+      items: batchCalls || []
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
