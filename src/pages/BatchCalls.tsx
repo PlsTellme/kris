@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Users } from "lucide-react";
+import { Phone, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { BatchCallStarter } from "@/components/BatchCallStarter";
 
 interface BatchCall {
@@ -17,29 +17,47 @@ interface BatchCall {
   updated_at: string;
 }
 
+interface PaginationInfo {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
 export default function BatchCalls() {
   const navigate = useNavigate();
   const [batchCalls, setBatchCalls] = useState<BatchCall[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    pageSize: 20,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchBatchCalls();
+    fetchBatchCalls(pagination.page);
   }, []);
 
-  const fetchBatchCalls = async () => {
+  const fetchBatchCalls = async (page: number = 1) => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('get-batch-calls');
-      
-      console.log('Batch calls response:', data, 'Error:', error);
+      const { data, error } = await supabase.functions.invoke('get-batch-calls', {
+        body: { page, pageSize: 20 }
+      });
       
       if (error) throw error;
       
       if (data?.success) {
-        console.log('Setting batch calls:', data.items);
         setBatchCalls(data.items || []);
-      } else {
-        console.warn('No success flag in response:', data);
+        if (data.pagination) {
+          setPagination(data.pagination);
+        }
       }
     } catch (error: any) {
       console.error('Error fetching batch calls:', error);
@@ -53,16 +71,22 @@ export default function BatchCalls() {
     }
   };
 
+  const handlePageChange = (newPage: number) => {
+    fetchBatchCalls(newPage);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('de-DE');
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    const normalizedStatus = status.toLowerCase();
+    switch (normalizedStatus) {
       case 'completed':
+      case 'done':
         return <Badge variant="default">Abgeschlossen</Badge>;
       case 'in_progress':
-        return <Badge variant="secondary">Läuft</Badge>;
+        return <Badge variant="secondary">In Bearbeitung</Badge>;
       case 'failed':
         return <Badge variant="destructive">Fehlgeschlagen</Badge>;
       default:
@@ -118,20 +142,22 @@ export default function BatchCalls() {
                   <TableHead>Call Name</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Erstellt am</TableHead>
-                  <TableHead>Aktualisiert am</TableHead>
                   <TableHead>Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {batchCalls.map((batch) => (
-                  <TableRow key={batch.batchid}>
+                  <TableRow 
+                    key={batch.batchid}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/batch-calls/${batch.batchid}`)}
+                  >
                     <TableCell className="font-medium">
                       {batch.callname || `Batch ${batch.batchid.slice(0, 8)}`}
                     </TableCell>
                     <TableCell>{getStatusBadge(batch.status)}</TableCell>
                     <TableCell>{formatDate(batch.created_at)}</TableCell>
-                    <TableCell>{formatDate(batch.updated_at)}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="outline"
                         size="sm"
@@ -144,6 +170,34 @@ export default function BatchCalls() {
                 ))}
               </TableBody>
             </Table>
+          )}
+          
+          {batchCalls.length > 0 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Seite {pagination.page} von {pagination.totalPages} ({pagination.total} gesamt)
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={!pagination.hasPrevPage || loading}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Zurück
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={!pagination.hasNextPage || loading}
+                >
+                  Weiter
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
