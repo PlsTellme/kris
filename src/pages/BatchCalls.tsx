@@ -66,10 +66,15 @@ export default function BatchCalls() {
     try {
       const { data, error } = await supabase.functions.invoke('get-batch-calls');
       
+      console.log('Batch calls response:', data, 'Error:', error);
+      
       if (error) throw error;
       
-      if (data.success) {
+      if (data?.success) {
+        console.log('Setting batch calls:', data.batchcalls);
         setBatchCalls(data.batchcalls || []);
+      } else {
+        console.warn('No success flag in response:', data);
       }
     } catch (error: any) {
       console.error('Error fetching batch calls:', error);
@@ -307,7 +312,6 @@ export default function BatchCalls() {
               <div className="text-center py-8">
                 <Phone className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground mb-4">Noch keine Batch-Calls vorhanden</p>
-                <BatchCallStarter onBatchStarted={fetchBatchCalls} />
               </div>
             ) : (
               <Table>
