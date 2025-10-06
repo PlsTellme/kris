@@ -46,7 +46,7 @@ serve(async (req) => {
     console.log('Fetching agents for user:', user.id);
 
     const { data: agents, error: agentsError } = await supabaseClient
-      .from('agents')
+      .from('batch_agents')
       .select('id, name, elevenlabs_agent_id, phone_number_id')
       .eq('user_id', user.id)
       .order('name', { ascending: true });
