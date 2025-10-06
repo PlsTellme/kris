@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Plus, Trash2, Phone } from "lucide-react";
@@ -20,6 +21,13 @@ interface Contact {
   call_name: string;
 }
 
+interface Agent {
+  id: string;
+  name: string;
+  elevenlabs_agent_id: string;
+  phone_number_id: string;
+}
+
 interface BatchCallStarterProps {
   onBatchStarted: () => void;
 }
@@ -31,7 +39,67 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
   const [agentPhoneNumberId, setAgentPhoneNumberId] = useState("");
   const [agentId, setAgentId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<string>("");
+  const [loadingAgents, setLoadingAgents] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchAgents();
+    }
+  }, [isOpen]);
+
+  const fetchAgents = async () => {
+    setLoadingAgents(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Fehler",
+          description: "Nicht authentifiziert",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch(
+        "https://ubqcxxfynhnwhvtogkvx.supabase.co/functions/v1/get-batch-agents",
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Fehler beim Laden der Agents");
+      }
+
+      const result = await response.json();
+      setAgents(result.agents || []);
+    } catch (error) {
+      console.error("Error fetching agents:", error);
+      toast({
+        title: "Fehler",
+        description: "Agents konnten nicht geladen werden",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
+
+  const handleAgentSelect = (agentId: string) => {
+    setSelectedAgent(agentId);
+    const agent = agents.find(a => a.id === agentId);
+    if (agent) {
+      setAgentId(agent.elevenlabs_agent_id);
+      setAgentPhoneNumberId(agent.phone_number_id);
+    }
+  };
 
   const addContact = () => {
     const newContact: Contact = {
@@ -121,6 +189,16 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
       return;
     }
 
+    // Validierung: Agent auswählen
+    if (!selectedAgent) {
+      toast({
+        title: "Fehler",
+        description: "Bitte wählen Sie einen Agent aus",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validierung: Kontakte (1-200)
     if (contacts.length === 0) {
       toast({
@@ -135,26 +213,6 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
       toast({
         title: "Fehler",
         description: "Maximal 200 Kontakte pro Batch-Call erlaubt",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validierung: Agent-ID
-    if (!agentId.trim()) {
-      toast({
-        title: "Fehler",
-        description: "Bitte geben Sie eine Agent-ID ein",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validierung: Phone Number ID
-    if (!agentPhoneNumberId.trim()) {
-      toast({
-        title: "Fehler",
-        description: "Bitte geben Sie eine Agent Phone Number ID ein",
         variant: "destructive",
       });
       return;
@@ -258,22 +316,23 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="agentId">ElevenLabs Agent-ID</Label>
-                  <Input
-                    id="agentId"
-                    value={agentId}
-                    onChange={(e) => setAgentId(e.target.value)}
-                    placeholder="agent_01..."
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="agentPhoneNumberId">Agent Phone Number ID</Label>
-                  <Input
-                    id="agentPhoneNumberId"
-                    value={agentPhoneNumberId}
-                    onChange={(e) => setAgentPhoneNumberId(e.target.value)}
-                    placeholder="phnum_01..."
-                  />
+                  <Label htmlFor="agent">Agent auswählen</Label>
+                  <Select
+                    value={selectedAgent}
+                    onValueChange={handleAgentSelect}
+                    disabled={loadingAgents}
+                  >
+                    <SelectTrigger id="agent">
+                      <SelectValue placeholder={loadingAgents ? "Lädt..." : "Wählen Sie einen Agent"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {agents.map((agent) => (
+                        <SelectItem key={agent.id} value={agent.id}>
+                          {agent.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>
@@ -391,7 +450,7 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
             </Button>
             <Button
               onClick={startBatchCall}
-              disabled={loading || contacts.length === 0 || !callName.trim() || !agentId.trim() || !agentPhoneNumberId.trim()}
+              disabled={loading || contacts.length === 0 || !callName.trim() || !selectedAgent}
             >
               {loading ? "Wird gestartet..." : `Batch-Call starten (${contacts.length} Kontakte)`}
             </Button>
