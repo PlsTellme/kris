@@ -324,15 +324,6 @@ export default function BatchCallDetails() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={exportToCSV}
-                disabled={syncing || batchAnswers.length === 0}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                CSV Export
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
                 onClick={handleManualSync}
                 disabled={syncing}
               >
@@ -417,6 +408,17 @@ export default function BatchCallDetails() {
                   })}
                 </TableBody>
               </Table>
+              <div className="flex justify-end mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportToCSV}
+                  disabled={syncing || batchAnswers.length === 0}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  CSV Export
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
