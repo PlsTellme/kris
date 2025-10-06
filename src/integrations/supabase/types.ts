@@ -56,6 +56,39 @@ export type Database = {
         }
         Relationships: []
       }
+      batch_agents: {
+        Row: {
+          created_at: string | null
+          elevenlabs_agent_id: string
+          id: string
+          language: string | null
+          name: string
+          phone_number_id: string
+          user_id: string | null
+          voice_name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          elevenlabs_agent_id: string
+          id?: string
+          language?: string | null
+          name: string
+          phone_number_id: string
+          user_id?: string | null
+          voice_name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          elevenlabs_agent_id?: string
+          id?: string
+          language?: string | null
+          name?: string
+          phone_number_id?: string
+          user_id?: string | null
+          voice_name?: string | null
+        }
+        Relationships: []
+      }
       batch_call_answers: {
         Row: {
           anrufdauer: number | null
@@ -111,7 +144,15 @@ export type Database = {
           vorname?: string | null
           zeitpunkt?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_answers_batch"
+            columns: ["batchid"]
+            isOneToOne: false
+            referencedRelation: "batch_calls"
+            referencedColumns: ["batchid"]
+          },
+        ]
       }
       batch_calls: {
         Row: {
@@ -225,7 +266,15 @@ export type Database = {
           user_id?: string
           vorname?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_pending_batch"
+            columns: ["batchid"]
+            isOneToOne: false
+            referencedRelation: "batch_calls"
+            referencedColumns: ["batchid"]
+          },
+        ]
       }
       phone_numbers: {
         Row: {
