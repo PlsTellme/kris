@@ -51,15 +51,19 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
     }
   }, [isOpen]);
 
+  const resetForm = () => {
+    setContacts([]);
+    setCallName("");
+    setSelectedAgent("");
+    setAgentId("");
+    setAgentPhoneNumberId("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const handleDialogChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
-      // Reset all states when dialog is closed
-      setContacts([]);
-      setCallName("");
-      setSelectedAgent("");
-      setAgentId("");
-      setAgentPhoneNumberId("");
+      resetForm();
     }
   };
 
@@ -458,7 +462,7 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
           {/* Aktionen */}
           <div className="flex justify-end gap-2">
             <Button
-              onClick={() => setIsOpen(false)}
+              onClick={() => handleDialogChange(false)}
               variant="outline"
               disabled={loading}
             >
