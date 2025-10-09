@@ -51,6 +51,18 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
     }
   }, [isOpen]);
 
+  const handleDialogChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      // Reset all states when dialog is closed
+      setContacts([]);
+      setCallName("");
+      setSelectedAgent("");
+      setAgentId("");
+      setAgentPhoneNumberId("");
+    }
+  };
+
   const fetchAgents = async () => {
     setLoadingAgents(true);
     try {
@@ -284,7 +296,7 @@ export function BatchCallStarter({ onBatchStarted }: BatchCallStarterProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleDialogChange}>
       <DialogTrigger asChild>
         <Button className="flex items-center gap-2">
           <Phone className="w-4 h-4" />
