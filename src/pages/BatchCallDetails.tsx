@@ -287,7 +287,7 @@ export default function BatchCallDetails() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto py-6 space-y-6 pb-24">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Batch Ergebnisse</h1>
@@ -321,15 +321,6 @@ export default function BatchCallDetails() {
                   )}
                 </div>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={exportToCSV}
-                disabled={syncing || batchAnswers.length === 0}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                CSV Export
-              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -421,6 +412,19 @@ export default function BatchCallDetails() {
           )}
         </CardContent>
       </Card>
+
+      {/* Fixed CSV Export Button */}
+      <div className="fixed bottom-6 right-6">
+        <Button
+          onClick={exportToCSV}
+          disabled={syncing || batchAnswers.length === 0}
+          className="bg-green-600 hover:bg-green-700 text-white shadow-lg"
+          size="lg"
+        >
+          <Download className="w-4 h-4 mr-2" />
+          CSV Export
+        </Button>
+      </div>
     </div>
   );
 }
